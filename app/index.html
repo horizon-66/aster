@@ -534,12 +534,12 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   <div class="hint">桌面跑本地模型，记忆、情绪、工作台都在那一台；这边记的东西可以同步过去。</div>
   <div class="btns"><button class="ghost" id="deskLink">到官网下载</button></div>
 
-  <h2 style="margin-top:18px">连接桌面（主库）· 需原生版</h2>
+  <h2 style="margin-top:18px">连接桌面</h2>
   <div class="hint" id="linkState">未连接 · 只在本机临时记录</div>
-  <div class="hint" style="color:#c8143a">网页版连不了局域网（浏览器的安全限制）。这功能要等套壳成原生之后才能用。</div>
-  <input id="deskUrl2" placeholder="电脑地址，如 http://192.168.1.3:8790">
-  <input id="pairCode" placeholder="桌面设置里显示的 6 位配对码">
-  <div class="btns"><button id="pairBtn">配对</button><button class="ghost" id="syncNow">立即同步</button></div>
+  <div class="hint">同一 Wi-Fi 下：扫桌面上的码，或点「自动查找」。安卓 Chrome 支持扫码；iOS 浏览器不支持，用「自动查找」。</div>
+  <div class="btns"><button id="scanPair">扫一扫配对</button><button class="ghost" id="autoFindDesk">自动查找</button><button class="ghost" id="syncNow">立即同步</button></div>
+  <input id="deskUrl2" placeholder="或手动填：http://aster.local:8777">
+  <input id="pairCode" placeholder="扫描后会自动填上，不用手输">
   <div class="hint" id="pairMsg"></div>
 
   <h2 style="margin-top:18px">同步到电脑</h2>
@@ -1767,6 +1767,81 @@ document.getElementById('newTopic')?.addEventListener('click', async () => {
   };
   paint();
 })();
+
+/* ---------- 扫一扫配对（浏览器原生 BarcodeDetector；不支持就退回手动） ---------- */
+$('#scanPair') && ($('#scanPair').onclick = async () => {
+  const msg = $('#pairMsg');
+  if (!('BarcodeDetector' in window)) {
+    msg.textContent = '这台手机不支持网页扫码，请点「自动查找」或手动填地址';
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  } catch (e) {
+    msg.textContent = '打不开摄像头（需要 https 并且允许权限）';
+    return;
+  }
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center';
+  const v = document.createElement('video');
+  v.playsInline = true; v.style.cssText = 'width:100%;height:auto';
+  box.appendChild(v); document.body.appendChild(box);
+  v.srcObject = stream; await v.play();
+  msg.textContent = '把电脑上的二维码框进画面…';
+  const det = new BarcodeDetector({ formats: ['qr_code'] });
+  const t0 = Date.now();
+  const tick = async () => {
+    if (Date.now() - t0 > 30000) { stop(); msg.textContent = '没扫到，超时了'; return; }
+    try {
+      const codes = await det.detect(v);
+      if (codes.length && codes[0].rawValue) {
+        const url = String(codes[0].rawValue);
+        stop();
+        const m = url.match(/^(https?:\/\/[^\/]+)/);
+        if (m) {
+          $('#deskUrl2').value = m[1];
+          $('#pairMsg').textContent = '已扫到：' + m[1] + '，点「配对」完成';
+        } else { msg.textContent = '这不是配对的码'; }
+        return;
+      }
+    } catch (e) {}
+    requestAnimationFrame(tick);
+  };
+  function stop() {
+    try { stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+    box.remove();
+  }
+  tick();
+});
+
+/* ---------- 自动查找电脑（同一 Wi-Fi，靠 aster.local 这个名字） ---------- */
+$('#autoFindDesk') && ($('#autoFindDesk').onclick = async () => {
+  const msg = $('#pairMsg');
+  msg.textContent = '正在找…（手机要和电脑连同一个 Wi-Fi）';
+  const hosts = ['aster.local'];
+  const ports = [8777, 8778, 8779, 8790, 8791, 8792];
+  for (const h of hosts) {
+    for (const p of ports) {
+      const url = `http://${h}:${p}`;
+      try {
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), 1200);
+        const r = await fetch(url + '/health', { signal: ctl.signal });
+        clearTimeout(t);
+        if (r.ok) {
+          const d = await r.json();
+          if (d && d.engine) {
+            $('#deskUrl2').value = url;
+            msg.textContent = '找到了：' + url;
+            return;
+          }
+        }
+      } catch (e) { /* 继续找下一个 */ }
+    }
+  }
+  msg.textContent = '没找到。网页版可能被浏览器挡住；套壳版可以。也可以手动填地址。';
+});
 
 /* ---------- 连接桌面：配对 / 队列 / 状态 ---------- */
 (function () {
