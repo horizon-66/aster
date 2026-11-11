@@ -481,11 +481,16 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 <div class="sheet" id="sheet-set">
   <h2>设置</h2>
   <label>服务商</label>
-  <div class="chips-line" id="providerChips">
-    <button data-p="deepseek" class="on">DeepSeek</button>
-    <button data-p="openai">OpenAI</button>
-    <button data-p="custom">自定义</button>
-  </div>
+  <select id="providerPick">
+    <option value="deepseek" selected>DeepSeek（深度求索）</option>
+    <option value="openai">OpenAI</option>
+    <option value="dashscope">通义千问（阿里云）</option>
+    <option value="zhipu">智谱 GLM</option>
+    <option value="moonshot">Moonshot（Kimi）</option>
+    <option value="siliconflow">硅基流动</option>
+    <option value="ollama">本机 Ollama</option>
+    <option value="custom">自定义</option>
+  </select>
   <label>Base URL</label>
   <input id="base" placeholder="https://api.deepseek.com/v1">
   <div class="hint">写 https，结尾带 /v1；少写了会自动补</div>
@@ -781,16 +786,25 @@ $('#setClose').onclick = () => $('#sheet-set').classList.remove('on');
 const PROVIDERS = {
   deepseek: {base: 'https://api.deepseek.com/v1', model: 'deepseek-chat'},
   openai: {base: 'https://api.openai.com/v1', model: 'gpt-4o-mini'},
+  dashscope: {base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus'},
+  zhipu: {base: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash'},
+  moonshot: {base: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k'},
+  siliconflow: {base: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-7B-Instruct'},
+  ollama: {base: 'http://127.0.0.1:11434/v1', model: 'qwen2.5:7b'},
   custom: {base: '', model: ''},
 };
-document.getElementById('providerChips')?.addEventListener('click', (e) => {
-  const b = e.target.closest('button'); if (!b) return;
-  const pid = b.dataset.p;
-  document.querySelectorAll('#providerChips button').forEach(x => x.classList.toggle('on', x === b));
+const pick = document.getElementById('providerPick');
+function applyProvider(pid) {
   const cfg = PROVIDERS[pid] || {};
-  if (cfg.base) { $('#base').value = cfg.base; $('#model').value = cfg.model; }
-  if (pid === 'custom') { $('#base').value = ''; $('#model').value = ''; }
-});
+  $('#base').value = cfg.base || '';
+  $('#model').value = cfg.model || '';
+  localStorage.setItem('aster.provider', pid);
+}
+pick?.addEventListener('change', () => applyProvider(pick.value));
+try {
+  const saved = localStorage.getItem('aster.provider');
+  if (saved && PROVIDERS[saved]) { pick.value = saved; applyProvider(saved); }
+} catch (e) {}
 
 $('#saveApi').onclick = async () => {
   const base = normBase($('#base').value), model = $('#model').value.trim(), key = $('#key').value.trim();
