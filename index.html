@@ -215,10 +215,22 @@
   .shot{border-radius:26px}
 
   @media (max-width:860px){
-    #top > .heroInner{grid-template-columns:1fr;gap:28px}
-    #top .art{order:-1;margin-bottom:8px}
-    #top .art canvas{width:min(70vw,360px)}
-    #top{min-height:auto;padding:72px 0 48px}
+    #top > .heroInner{
+      grid-template-columns:1fr;gap:18px;min-height:auto!important;
+      padding:34px 20px 44px!important;
+    }
+    #top .art{order:-1;margin-bottom:0}
+    #top .art canvas{width:min(58vw,240px)}
+    #top h1{font-size:clamp(28px,7.6vw,40px);line-height:1.14;letter-spacing:-.03em}
+    #top h1 em{display:inline}
+    #top .lede{margin-top:14px;font-size:14.5px;line-height:1.8;max-width:100%;overflow-wrap:anywhere}
+    #top > .heroInner{max-width:100%;overflow:hidden}
+    #top > .heroInner > *{min-width:0}
+    #top h1,#top .lede{white-space:normal;word-break:break-word}
+    #top h1{overflow-wrap:anywhere}
+    #top .cta{margin-top:20px}
+    #top .note{margin-top:12px;font-size:11.5px}
+    section{padding:56px 0}
   }
 
   /* —— 版式三改 —— */
@@ -372,6 +384,17 @@
   .btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.22)}
   .lang{background:transparent}
   .price,.faq details[open]{background:rgba(255,255,255,.06)}
+
+  html,body{max-width:100%;overflow-x:hidden}
+  /* 手机：首屏取消网格，改单列块，彻底避免超宽 */
+  @media (max-width:860px){
+    #top > .heroInner{display:block!important;width:auto!important;max-width:none!important;
+      padding:30px 20px 40px!important;min-height:0!important;overflow:visible!important}
+    #top .art{display:flex;justify-content:center;margin:0 0 14px}
+    #top .art canvas{width:150px!important}
+    #top .lede{max-width:none!important;width:auto!important;word-break:break-word}
+    #top h1{font-size:clamp(26px,7.4vw,36px)!important;line-height:1.16!important;word-break:break-word}
+  }
 </style>
 </head>
 <body>
