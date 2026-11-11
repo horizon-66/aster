@@ -1151,7 +1151,7 @@ document.getElementById('deskLink')?.addEventListener('click', () => {
     "新话题": "New topic",
     "安静地看着你": "Quietly watching you",
     "还没有情绪": "no mood yet",
-    "未连接星子主库，仅可临时记录，无法长久留存": "Not paired with a desktop. Temporary records only.",
+    "未连接桌面端，仅可临时记录，无法长久留存": "Not paired with a desktop. Temporary records only.",
     "先到「设置」里填 API，填完就能说话（点这里）": "Add your API key in Settings to start talking (tap here)",
     "说点什么…": "Say something…",
     "在吗": "You there?",
@@ -1520,7 +1520,7 @@ $('#autoFindDesk') && ($('#autoFindDesk').onclick = async () => {
       ? (EN ? 'Your memory lives on the desktop; this device is just a window'
             : '记忆主库在你的桌面设备，本机仅为交互窗口')
       : (EN ? 'Not paired with a desktop — temporary records only'
-            : '未连接星子主库，仅可临时记录，无法长久留存');
+            : '未连接桌面端，仅可临时记录，无法长久留存');
     if (state) state.textContent = linked
       ? `已连接 ${url}${left ? ' · 待送 ' + left + ' 条' : ' · 已同步'}`
       : '未连接 · 只在本机临时记录';
@@ -1601,7 +1601,7 @@ $('#autoFindDesk') && ($('#autoFindDesk').onclick = async () => {
     if (name === 'home') { name = 'chat'; }
     if (name === 'chat') { chat.classList.add('on'); return; }
     if (name === 'about') {
-      add('Aster · 星子：本地优先的数字个体，记忆存在你自己的设备上', 'sys');
+      add('Aster：本地优先的数字个体，记忆存在你自己的设备上', 'sys');
       add('版本 ' + (localStorage.getItem('aster.build') || '1.0.0'), 'sys');
       return;
     }
