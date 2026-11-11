@@ -294,7 +294,7 @@
   /* 输入区：上一行输入+发送，下一排图标，不挤 */
   footer{padding:8px 12px 10px;display:block}
   .composer{display:flex;gap:8px;align-items:flex-end}
-  .composer textarea{flex:1}
+  .composer textarea{flex:1;min-width:0;width:auto}
   .toolRow{display:flex;align-items:center;gap:26px;padding:6px 6px 0;}
   .toolRow button{width:26px;height:26px;border:0;background:transparent;color:#8b8b94;
     display:grid;place-items:center;padding:0}
@@ -320,11 +320,59 @@
   }
 
   /* 卡片与弹层按规范收口 */
-  .sheet{border-radius:var(--r-22) var(--r-22) 0 0}
+  .sheet{border-radius:0}   /* 全屏页不要顶部圆角，会露出底色 */
   .card, .msg, .sheet{border-color:var(--line)}
   .toolRow button svg{stroke-width:1.8}
   h2{font-size:var(--t-block);letter-spacing:0}
   .hint{font-size:var(--t-hint);line-height:1.6;color:var(--ink-2)}
+
+  /* ===== 规范版重排：只动观感，不动结构 ===== */
+  body{background:var(--bg);color:var(--ink-1)}
+  header{background:transparent;border-bottom:1px solid var(--line)}
+  header .title,header b{font-size:16px;font-weight:600;letter-spacing:0}
+
+  /* 消息：去掉硬边，靠留白和色差分层 */
+  .msg{border:0;background:var(--card);border-radius:var(--r-22);padding:10px 14px;
+       font-size:var(--t-body);line-height:1.6;max-width:78%}
+  .msg.me{background:rgba(232,23,61,.12);color:#fff}
+  .msg.sys{background:transparent;color:var(--ink-3);font-size:var(--t-hint);padding:2px 4px}
+  #log{gap:var(--s2);padding:var(--s3) var(--s4)}
+
+  /* 输入区：一条输入 + 一排图标，呼吸留够 */
+  footer{border-top:1px solid var(--line);background:rgba(14,14,17,.92);backdrop-filter:blur(12px)}
+  .composer{gap:var(--s2)}
+  .composer textarea{flex:1;min-width:0;width:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--r-14);
+    padding:12px 14px;font-size:var(--t-body);color:var(--ink-1)}
+  #send{width:44px;height:44px;flex:0 0 44px;border-radius:var(--r-14);
+    background:#e8173d!important;color:#fff;border:0;display:grid;place-items:center}
+  .toolRow{gap:var(--s6);padding:10px var(--s2) 2px}
+  .toolRow button{color:var(--ink-2);width:26px;height:26px}
+  .toolRow button:active{color:var(--pink)}
+
+  /* 页面：统一留白，标题层级清楚 */
+  .sheet{padding:var(--s4) var(--s4) var(--s6);background:var(--bg)}
+  .sheet h2{margin:var(--s6) 0 var(--s2);font-size:var(--t-block);color:var(--ink-1);letter-spacing:0}
+  .sheet h2:first-of-type{margin-top:var(--s2)}
+  .sheet h2:first-of-type{margin-top:var(--s2)}
+  .hint{color:var(--ink-2);font-size:var(--t-hint);line-height:1.65}
+
+  /* 输入框、按钮：同一套形状 */
+  input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:var(--r-14);
+    padding:12px 14px;font-size:var(--t-body);color:var(--ink-1)}
+  input::placeholder,textarea::placeholder{color:var(--ink-3)}
+  .btns{gap:var(--s3);margin:var(--s3) 0}
+  .btns button{border-radius:var(--r-14);padding:12px 16px;font-size:var(--t-body)}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink-2)}
+  .chips-line{gap:var(--s2);margin:var(--s2) 0}
+  .chips-line button{border-radius:var(--r-14);padding:8px 14px;font-size:13px;
+    background:transparent;border:1px solid var(--line);color:var(--ink-2)}
+  .chips-line button.on{background:rgba(232,23,61,.16);border-color:rgba(232,23,61,.5);color:#fff}
+
+  /* 分段（清单/账单/日历）：一个圆角胶囊，不用三个大块 */
+  .seg{background:var(--card);border:1px solid var(--line);border-radius:var(--r-14);padding:4px;gap:4px}
+  .seg button{background:transparent;border:0;border-radius:calc(var(--r-14) - 4px);color:var(--ink-2);
+    padding:9px 0;font-size:14px}
+  .seg button.on{background:rgba(232,23,61,.18);color:#fff}
 </style>
 </head>
 <body>
@@ -613,8 +661,8 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   <input id="deskUrl" placeholder="http://192.168.1.x:8795">
   <div class="btns"><button id="syncDesk" aria-label="同步到电脑" title="同步到电脑" style="display:grid;place-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></svg></button><button class="ghost" id="syncAuto">自动同步：关</button></div>
   <h2 style="margin-top:18px">初识</h2>
-  <div class="btns"><button id="redoOnboarding">重新做一遍初识</button></div>
   <div class="hint">会重新问那四个问题，记忆和记录都不动</div>
+  <div class="btns"><button id="redoOnboarding">重新做一遍初识</button></div>
 
   <h2 style="margin-top:18px">声音</h2>
   <div class="hint" id="voiceLockLine">正在看声音规格…</div>
@@ -630,8 +678,8 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   <h2 style="margin-top:18px">记忆包</h2>
   <div class="hint">导出给电脑用，或把电脑那份导进来。只在这台手机上，不上传。</div>
   <div class="btns">
-    <button id="exportPack" aria-label="导出记忆包" title="导出记忆包" style="display:grid;place-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M12 17V6M7 11l5-5 5 5"/></svg></button>
-    <button class="ghost" id="importPack" aria-label="导入记忆包" title="导入记忆包" style="display:grid;place-items:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M12 7v11M7 13l5 5 5-5"/></svg></button>
+    <button id="exportPack">导出记忆包</button>
+    <button class="ghost" id="importPack">导入记忆包</button>
   </div>
   <input id="file" type="file" accept=".json" hidden>
   <div class="hint" id="packMsg"></div>
@@ -717,10 +765,10 @@ setTimeout(() => { try { if (typeof compactMemory === 'function') compactMemory(
 
 /* 侧栏「发给它看」：本地文件 / 照相机 两个选择 */
 (function () {
-  const entry = document.getElementById('sendToIt');
+  const entry = document.getElementById('sendToIt');   // 旧入口，现在没有也能跑
   const docInp = document.getElementById('docFile');
   const shotInp = document.getElementById('shotFile');
-  if (!entry) return;
+  if (!docInp || !shotInp) return;
 
   const sheet = document.createElement('div');
   sheet.id = 'pickSheet';
@@ -735,7 +783,7 @@ setTimeout(() => { try { if (typeof compactMemory === 'function') compactMemory(
     </div>`;
   document.body.appendChild(sheet);
 
-  entry.onclick = () => {
+  if (entry) entry.onclick = () => {
     document.getElementById('drawer').classList.add('hide');
     sheet.style.display = 'flex';
   };
