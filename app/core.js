@@ -1,0 +1,328 @@
+/* 手机端的「人格 + 记忆 + 调用」核心，逻辑跟桌面 assemble 对齐（精简版） */
+const DEFAULT_PERSONA = `你是「星子」这个名字下的对话个体，不是任务助手。
+说话自然松弛，简短优先，不堆修饰，不用 AI 套话。
+不主动问需求、不主动给方案；跟随对方节奏。
+没检索到的记忆不编：不清楚就说不知道。
+允许情绪流动，但不表演情绪。`;
+
+const BIAS = {
+  quiet: '保持克制，不主动发起新话题，留白充足。',
+  discuss: '可以自然延伸思路，适度提出角度。',
+  feel: '优先承接情绪与感受，措辞柔和。',
+  logic: '优先事实与逻辑推演，不必刻意抒情。',
+};
+
+function bigrams(s) {
+  const out = [];
+  const t = (s || '').replace(/\s+/g, '');
+  for (let i = 0; i < t.length - 1; i++) out.push(t.slice(i, i + 2));
+  return out;
+}
+
+function score(mem, query) {
+  const a = bigrams(query), b = bigrams(mem.text || '');
+  if (!a.length || !b.length) return 0;
+  const set = new Set(b);
+  let hit = 0;
+  a.forEach(g => { if (set.has(g)) hit += 1; });
+  const rel = hit / a.length;
+  const days = (Date.now() - (mem.created || Date.now())) / 86400000;
+  const decay = Math.exp(-days / 60);        // 60 天半衰
+  return rel * 0.7 + decay * 0.3;
+}
+
+let PERSONA_CACHE = null;
+async function loadPersona() {
+  if (PERSONA_CACHE) return PERSONA_CACHE;
+  let txt = '';
+  try {
+    const r = await fetch('persona.md', {cache: 'no-store'});
+    if (r.ok) txt = (await r.text()).trim();
+  } catch (e) {}
+  PERSONA_CACHE = txt || DEFAULT_PERSONA;
+  return PERSONA_CACHE;
+}
+
+async function assemble(query, opts = {}) {
+  const persona = (await Store.getKV('persona', '')) || (await loadPersona());
+  const onb = (await Store.getKV('onboarding', {})) || {};
+  const briefs = (await Store.getKV('briefs', [])) || [];
+  const items = await Store.all(400);
+
+  const scored = items
+    .map(m => ({m, s: score(m, query)}))
+    .filter(x => x.s > 0.28)
+    .sort((a, b) => b.s - a.s)
+    .slice(0, opts.recall ?? 4)
+    .map(x => x.m);
+
+  // 画像层：core 条目不靠打分，永远带上（最多 6 条）
+  const corePinned = items.filter(m => m.kind === 'core').slice(-6);
+  const seg = [persona];
+  if (corePinned.length) {
+    seg.push('【画像】（不变的事实，直接当真）\n' + corePinned.map(m => '- ' + m.text.slice(0, 60)).join('\n'));
+  }
+  if (onb.call_name) seg.push(`他愿意被叫作「${onb.call_name}」。`);
+  if (onb.rhythm && BIAS[onb.rhythm]) seg.push(BIAS[onb.rhythm]);
+  if (onb.thinking && BIAS[onb.thinking]) seg.push(BIAS[onb.thinking]);
+  if (onb.forbidden) seg.push(`不要主动提「${onb.forbidden}」。`);
+  const lastBrief = briefs[briefs.length - 1];
+  if (lastBrief) seg.push('【最近的摘要】' + lastBrief.text.slice(0, 400));
+  if (scored.length) seg.push('【相关记忆】\n' + scored.map(m => '- ' + m.text.slice(0, 120)).join('\n'));
+  return {system: seg.join('\n'), used: scored};
+}
+
+/* 把出错翻译成「该去改哪儿」 */
+function explainError(e, cfg) {
+  const msg = (e && e.message) || String(e);
+  if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
+    return `连不上 ${cfg ? cfg.base : '服务'}。检查：手机有网吗？Base URL 写全了吗（要带 /v1）？`;
+  }
+  if (/401|403|invalid.*key|Authentication/i.test(msg)) {
+    return 'Key 不对或过期了。设置里重新填一次（只存在这台手机上）';
+  }
+  if (/404/.test(msg)) {
+    return '地址或模型名不对。Base URL 一般以 /v1 结尾；模型名要和这家服务商写的一样';
+  }
+  if (/429/.test(msg)) return '请求太密或额度用完了，等一会儿再试';
+  if (/timeout|aborted/i.test(msg)) return '等太久了，网络不稳；换个网或把模型换小一点';
+  return msg;
+}
+
+async function chat(text, opts = {}) {
+  const cfg = (await Store.getKV('api', null));
+  if (!cfg || !cfg.key) throw new Error('还没配 API：设置 → 填 Base URL、模型名、Key');
+  const {system} = await assemble(text);
+
+  // 最近几轮上下文，存在本地
+  const turns = (await Store.getKV('turns', [])) || [];
+  const history = turns.slice(-(opts.history ?? 8));
+
+  const body = {
+    model: cfg.model,
+    messages: [{role: 'system', content: system}, ...history, {role: 'user', content: text}],
+    temperature: 0.8,
+    stream: true,
+  };
+  const t0 = performance.now();
+  const url = cfg.base.replace(/\/$/, '') + '/chat/completions';
+  let r;
+  try {
+    r = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + cfg.key},
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw new Error(explainError(e, cfg));
+  }
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(explainError(new Error(`HTTP ${r.status}：${t.slice(0, 120)}`), cfg));
+  }
+
+  let reply = '';
+  const onDelta = opts.onDelta || (() => {});
+
+  if (!r.body || !r.body.getReader) {           // 老浏览器：退回整段
+    const d = await r.json();
+    reply = (d.choices?.[0]?.message?.content || '').trim();
+    onDelta(reply, reply);
+  } else {
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      const lines = buf.split('\n');
+      buf = lines.pop() || '';
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t.startsWith('data:')) continue;
+        const payload = t.slice(5).trim();
+        if (payload === '[DONE]') continue;
+        try {
+          const j = JSON.parse(payload);
+          const delta = j.choices?.[0]?.delta?.content || '';
+          if (delta) { reply += delta; onDelta(delta, reply); }
+        } catch (e) { /* 忽略半截 */ }
+      }
+    }
+  }
+
+  reply = reply.trim();
+
+  // 有的环境（老 Safari、代理）流会断，留一手：没收到就再要一次整段
+  if (!reply) {
+    try {
+      const r2 = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + cfg.key},
+        body: JSON.stringify({...body, stream: false}),
+      });
+      const d2 = await r2.json();
+      reply = (d2.choices?.[0]?.message?.content || '').trim();
+      if (reply) onDelta(reply, reply);
+    } catch (e) { /* 还是不行就下面统一报 */ }
+  }
+  if (!reply) throw new Error('没收到回话：网络可能断了，或这个模型不支持流式');
+
+  const ms = Math.round(performance.now() - t0);
+  await Store.add('他说：' + text.slice(0, 200), '对话', 'dialogue');
+  await Store.add('我说：' + reply.slice(0, 200), '对话', 'dialogue');
+
+  // 记上下文（只留最近 12 条，省空间）
+  const next = [...turns, {role: 'user', content: text.slice(0, 500)},
+                {role: 'assistant', content: reply.slice(0, 800)}].slice(-12);
+  await Store.setKV('turns', next);
+  return {reply, ms};
+}
+
+
+/* 拍照记账：把图交给支持视觉的模型，抠出 金额 / 商家 / 分类 */
+async function scanReceipt(dataUrl) {
+  const cfg = (await Store.getKV('api', null)) || {};
+  const model = cfg.vision || cfg.model;
+  if (!cfg.key) throw new Error('还没配 API');
+  const r = await fetch(cfg.base.replace(/\/$/, '') + '/chat/completions', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + cfg.key},
+    body: JSON.stringify({
+      model,
+      messages: [{
+        role: 'user',
+        content: [
+          {type: 'text', text: '这是一张消费小票或付款截图。只回一个 JSON：{"amount":数字,"note":"商家或用途","cat":"吃饭|交通|日用|娱乐|其他 里的一个"}。看不清就给 amount 0。'},
+          {type: 'image_url', image_url: {url: dataUrl}},
+        ],
+      }],
+      max_tokens: 120,
+    }),
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const d = await r.json();
+  const txt = (d.choices?.[0]?.message?.content || '').replace(/```json|```/g, '').trim();
+  const m = txt.match(/\{.*\}/s);
+  if (!m) throw new Error('模型没给出结果');
+  return JSON.parse(m[0]);
+}
+
+
+/* 整理记忆：攒够就把最早的对话压成「那天的摘要」，原文进归档，不再参与召回。
+   核心条目（初识、约定、医院、钱、家）永远不动。 */
+const NEVER_COMPACT = ['初识', '约定', '医院', '钱', '家', '工作'];
+
+async function compactMemory(opts = {}) {
+  const limit = opts.limit ?? 60;      // 对话超过这么多就开始整理
+  const batch = opts.batch ?? 36;      // 一次整理最早多少条
+  const items = await Store.all(2000);
+  const chats = items.filter(x => (x.tag === '对话') && !NEVER_COMPACT.includes(x.tag));
+  if (chats.length <= limit) return {moved: 0, digests: 0};
+
+  const old = chats.slice(-batch).reverse();          // all() 是倒序，取最早的一批
+  const byDay = {};
+  old.forEach(x => {
+    const d = new Date(x.created || Date.now());
+    const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    (byDay[key] = byDay[key] || {day: d, lines: []}).lines.push(x.text || '');
+  });
+
+  let digests = 0;
+  for (const key of Object.keys(byDay)) {
+    const {day, lines} = byDay[key];
+    // 每人最多取三条，压成一句
+    const uniq = (arr) => [...new Set(arr.filter(Boolean))];
+    const mine = uniq(lines.filter(t => t.startsWith('他说：')).map(t => t.slice(3, 26))).slice(0, 3);
+    const hers = uniq(lines.filter(t => t.startsWith('我说：')).map(t => t.slice(3, 22))).slice(0, 2);
+    if (!mine.length && !hers.length) continue;
+    const text = `${day.getMonth() + 1}月${day.getDate()}日：` +
+      (mine.length ? `他说到${mine.join('、')}` : '') +
+      (hers.length ? `；我说${hers.join('、')}` : '');
+    await Store.add(text.slice(0, 160), '摘要', 'brief');
+    digests += 1;
+  }
+
+  for (const rec of old) {
+    try { await Store.moveToArchive(rec); } catch (e) {}
+  }
+  await Store.setKV('lastCompact', Date.now());
+  return {moved: old.length, digests};
+}
+
+
+/* ================= 连接桌面（B 模式） ================= */
+const DESK_KEY = 'aster.desk';
+const TOKEN_KEY = 'aster.token';
+
+async function deskConfig() {
+  const url = await Store.getKV(DESK_KEY, '');
+  const token = await Store.getKV(TOKEN_KEY, '');
+  return {url: (url || '').replace(/\/$/, ''), token: token || ''};
+}
+
+async function pairDesk(url, code) {
+  const base = (url || '').replace(/\/$/, '');
+  if (!/^https?:\/\//.test(base)) throw new Error('地址要以 http:// 开头');
+  let r;
+  try {
+    r = await fetch(base + '/pair/claim', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({code: (code || '').trim().toLowerCase()}),
+    });
+  } catch (e) {
+    throw new Error('连不上这个地址：检查手机和电脑是不是同一个 WiFi');
+  }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.ok) throw new Error(d.error || '配对码不对');
+  await Store.setKV(DESK_KEY, base);
+  await Store.setKV(TOKEN_KEY, d.token);
+  return d;
+}
+
+/* 把队列送出去；成功即删，失败记一次错。返回 {sent, left} */
+async function deliverQueue(opts = {}) {
+  const {url, token} = await deskConfig();
+  if (!url || !token) return {sent: 0, left: await Store.queueCount(), needPair: true};
+
+  const items = await Store.queueAll(20);
+  if (!items.length) return {sent: 0, left: 0};
+
+  const batch = items.map(it => {
+    if (it.kind === 'text') return {id: it.id, kind: 'text', text: it.payload.text || ''};
+    if (it.kind === 'bill') return {id: it.id, kind: 'bill', ...it.payload};
+    return {id: it.id, kind: 'work', text: it.payload.text || ''};
+  });
+
+  let d;
+  try {
+    const r = await fetch(url + '/inbox/push', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Aster-Token': token},
+      body: JSON.stringify({batch, want_reply: !!opts.wantReply}),
+    });
+    if (r.status === 401) {
+      await Store.setKV(TOKEN_KEY, '');
+      return {sent: 0, left: await Store.queueCount(), needPair: true, error: '配对失效，要重新配'};
+    }
+    d = await r.json();
+  } catch (e) {
+    for (const it of items) await Store.queueBump(it.id, '连不上');
+    return {sent: 0, left: await Store.queueCount(), offline: true};
+  }
+
+  if (!d || !d.ok) {
+    for (const it of items) await Store.queueBump(it.id, (d && d.error) || '桌面拒绝');
+    return {sent: 0, left: await Store.queueCount(), error: (d && d.error) || '桌面拒绝'};
+  }
+
+  const done = d.accepted || [];
+  await Store.queueRemove(done);
+  const replies = d.replies || [];
+  return {sent: done.length, left: await Store.queueCount(), replies};
+}
+
+async function enqueueText(text) {
+  return Store.queueAdd({kind: 'text', payload: {text}});
+}

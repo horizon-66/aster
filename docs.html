@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>说明 · Aster</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2.6 13.8 10 21 12l-7.2 2L12 21.4 10.2 14 3 12l7.2-2Z' fill='none' stroke='%23e8173d' stroke-width='1.6'/></svg>">
+<style>
+  :root{--pink:#e8173d;--ink:#1b1b1e;--muted:#7a7a80;--line:rgba(20,20,25,.08)}
+  *{box-sizing:border-box}
+  body{margin:0;background:#f6f5f3;color:var(--ink);font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.9}
+  a{color:var(--pink);text-decoration:none}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px}
+  header{border-bottom:1px solid var(--line);background:rgba(246,245,243,.9);position:sticky;top:0;backdrop-filter:blur(12px)}
+  .nav{display:flex;align-items:center;gap:10px;height:60px;font-size:13px}
+  .nav b{letter-spacing:.26em;font-weight:600;font-size:13px}
+  .nav svg{width:20px;height:20px;stroke:var(--pink)}
+  .nav .sp{flex:1}
+  .nav a{color:var(--muted)}
+  h1{font-size:28px;margin:44px 0 8px;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 34px}
+  h2{font-size:14px;color:var(--pink);letter-spacing:.18em;margin:40px 0 12px}
+  h3{font-size:16px;margin:26px 0 8px}
+  p,li{font-size:14px;color:#3f3f46}
+  ol,ul{padding-left:20px}
+  code{background:#fff;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12.5px}
+  pre{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow:auto;font-size:12.5px}
+  .box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:14px 0}
+  footer{border-top:1px solid var(--line);margin-top:56px;padding:24px 0 48px;color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<header><div class="wrap nav">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.6 13.8 10 21 12l-7.2 2L12 21.4 10.2 14 3 12l7.2-2Z"/></svg>
+  <b>ASTER</b><span class="sp"></span><a href="/">首页</a>
+</div></header>
+
+<script src="config.js"></script>
+<main class="wrap">
+<h1>说明</h1>
+<p class="sub">装、配、带上记忆，以及出问题时先看哪。</p>
+
+<h2>安装</h2>
+<h3>macOS</h3>
+<ol>
+  <li>下载 <code>.pkg</code>，双击安装</li>
+  <li>第一次打开如果被 Gatekeeper 拦下：右键 → 打开</li>
+  <li>打开后会自己起引擎，界面右下角显示「本地」就绪</li>
+</ol>
+<div class="box">安装包约 630 MB，里面带着 Python 运行时；不需要你另装环境。</div>
+
+<h3>手机</h3>
+<ol>
+  <li>手机浏览器打开 <code>/app/</code></li>
+  <li>Safari 分享 → 添加到主屏幕；Chrome → 安装应用</li>
+  <li>设置里填 Base URL、模型名、API Key（手机上不跑模型）</li>
+</ol>
+
+<h2>模型</h2>
+<p>桌面版默认连本机的 Ollama。设置里「本地大脑」可以一键拉取；7B 约 5 GB 内存，14B 约 9 GB。</p>
+<div class="box">手机版不跑模型，调用你在设置里填的 OpenAI 兼容接口。</div>
+
+<h2>记忆</h2>
+<p>记忆分三样：条目库（mem.db）、摘要快照（briefs.json）、当下状态（bus.json）。都在本机，随时可导出。</p>
+<h3>导出与导入</h3>
+<ul>
+  <li>桌面：设置 → 记忆包 → 导出 / 导入（zip）</li>
+  <li>手机：设置 → 记忆包 → 导出 / 导入（json）</li>
+  <li>手机 → 桌面：同一 WiFi，填电脑地址，点同步；记录和账目会进桌面工作台</li>
+</ul>
+
+<h2>数据与隐私</h2>
+<ul>
+  <li>对话默认走本机模型，不上传</li>
+  <li>用云端时，请求直连你选的服务商，用你自己的 key；没有中转服务器</li>
+  <li>一条记忆约 100–200 字节，十万条约 20 MB</li>
+  <li>删掉应用不会删掉记忆；记忆在「应用支持」目录里，需要手动导出或删除</li>
+</ul>
+
+<h2>出问题先看这几步</h2>
+<ol>
+  <li>设置 → 自检：它会检查引擎、人格、记忆条数、情绪，并给出人话结论</li>
+  <li>「引擎没开」：退出应用再开；仍不行看 <code>~/Library/Application Support/Aster/memory/</code> 是否可写</li>
+  <li>答非所问：先看设置里当前模型是不是你要的那个</li>
+</ol>
+
+<h2>版本</h2>
+<p>当前 <code id="ver">3.8.3</code>。历史版本在 <a href="https://github.com/USER/aster-site/releases">Releases</a>。</p>
+</main>
+
+<footer><div class="wrap">陪着你，慢慢生长 · <a href="mailto:hello@asteragent.com">hello@asteragent.com</a></div></footer>
+<script>
+  if (window.ASTER) {
+    document.getElementById('ver').textContent = window.ASTER.version;
+    const a = document.querySelector('a[href*="github.com/USER"]');
+    if (a) a.href = 'https://github.com/' + window.ASTER.repo + '/releases';
+  }
+</script>
+</body>
+</html>
