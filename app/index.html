@@ -602,6 +602,7 @@ async function saveHistory() {
 }
 
 const add = (text, who = 'her', opts = {}) => {
+  if (text === undefined || text === null || String(text).trim() === '') return null;  // 空的不画
   const el = document.createElement('div');
   el.className = 'msg ' + who;
   el.textContent = text;
@@ -648,7 +649,8 @@ async function boot() {
   }
   else add('我在', 'her');
 }
-boot();
+let __booted = false;
+(async () => { if (__booted) return; __booted = true; await boot(); })();
 restoreHistory().catch(() => {});
 setTimeout(() => { try { if (typeof compactMemory === 'function') compactMemory().catch(() => {}); } catch (e) {} }, 3000);
 
