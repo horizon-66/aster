@@ -1712,6 +1712,7 @@ document.getElementById('newTopic')?.addEventListener('click', async () => {
     if (!on()) return;
     try {
       openAudio = openAudio || new Audio('sfx/open.m4a');
+      openAudio.preload = 'auto';
       openAudio.loop = true; openAudio.volume = 0.42;
       openAudio.play().catch(() => {});
     } catch (e) {}
@@ -1744,19 +1745,20 @@ document.getElementById('newTopic')?.addEventListener('click', async () => {
       a.play().catch(() => {});
     } catch (e) {}
   };
-  (async () => {
+  // 浏览器不许「没点就响」：先试一次，被拦就等下一次触摸再试，直到真的响
+  let audioStarted = false;
+  const tryStartAudio = async () => {
+    if (audioStarted || !on()) return audioStarted;
     let first = false;
-    try { first = !(await Store.getKV('onboarding', null)); } catch (e) {}
-    if (first) {
-      startOpen();
-      const kick = () => { startOpen(); document.removeEventListener('pointerdown', kick); };
-      document.addEventListener('pointerdown', kick, {once: true});
-    } else {
-      playEntry();
-      const kick2 = () => { playEntry(); document.removeEventListener('pointerdown', kick2); };
-      document.addEventListener('pointerdown', kick2, {once: true});
-    }
-  })();
+    try { first = !(await Store.getKV('onboarding', null)); } catch (e) { first = true; }
+    if (first) startOpen(); else playEntry();
+    audioStarted = true;
+    return true;
+  };
+  tryStartAudio();
+  const kickAudio = () => { tryStartAudio(); };
+  document.addEventListener('pointerdown', kickAudio, true);
+  document.addEventListener('touchstart', kickAudio, { passive: true });
 
   /* 界面音：轻、短，不做满 */
   const sfx = (n, v) => { try { play(n, v ?? 0.35); } catch {} };
