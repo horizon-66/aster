@@ -1735,9 +1735,28 @@ document.getElementById('newTopic')?.addEventListener('click', async () => {
       if (v <= 0) { clearInterval(t); a.pause(); }
     }, 80);
   };
-  startOpen();
-  const kick = () => { startOpen(); document.removeEventListener('pointerdown', kick); };
-  document.addEventListener('pointerdown', kick, {once: true});
+  // 只有「第一次来（还没做过问卷）」才放整首开场乐；之后每次进来只给一声短的
+  const playEntry = () => {
+    if (!on()) return;
+    try {
+      const a = new Audio('sfx/entry.m4a');
+      a.volume = 0.5;
+      a.play().catch(() => {});
+    } catch (e) {}
+  };
+  (async () => {
+    let first = false;
+    try { first = !(await Store.getKV('onboarding', null)); } catch (e) {}
+    if (first) {
+      startOpen();
+      const kick = () => { startOpen(); document.removeEventListener('pointerdown', kick); };
+      document.addEventListener('pointerdown', kick, {once: true});
+    } else {
+      playEntry();
+      const kick2 = () => { playEntry(); document.removeEventListener('pointerdown', kick2); };
+      document.addEventListener('pointerdown', kick2, {once: true});
+    }
+  })();
 
   /* 界面音：轻、短，不做满 */
   const sfx = (n, v) => { try { play(n, v ?? 0.35); } catch {} };
