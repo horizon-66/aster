@@ -308,6 +308,23 @@
   .sheetTop .backBtn{width:34px;height:34px;border-radius:11px;border:1px solid var(--line);
     background:rgba(255,255,255,.06);color:inherit;display:grid;place-items:center;padding:0}
   .sheetTop b{font-size:16px;font-weight:600}
+
+  /* ===== 规范变量（改界面只动这里） ===== */
+  :root{
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px;
+    --r-14:14px; --r-22:22px;
+    --t-title:20px; --t-block:15px; --t-body:15px; --t-hint:12.5px;
+    --line:rgba(255,255,255,.08);
+    --bg:#0E0E11; --card:#141417;
+    --ink-1:#F2F2F4; --ink-2:#8E8E96; --ink-3:#5A5A62;
+  }
+
+  /* 卡片与弹层按规范收口 */
+  .sheet{border-radius:var(--r-22) var(--r-22) 0 0}
+  .card, .msg, .sheet{border-color:var(--line)}
+  .toolRow button svg{stroke-width:1.8}
+  h2{font-size:var(--t-block);letter-spacing:0}
+  .hint{font-size:var(--t-hint);line-height:1.6;color:var(--ink-2)}
 </style>
 </head>
 <body>
