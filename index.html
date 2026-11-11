@@ -473,8 +473,10 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   <h2>设置</h2>
   <label>Base URL</label>
   <input id="base" placeholder="https://api.deepseek.com/v1">
+  <div class="hint">写 https，结尾带 /v1；少写了会自动补</div>
   <label>模型名</label>
   <input id="model" placeholder="deepseek-chat">
+  <div class="hint">DeepSeek 就是 deepseek-chat，别写 deepseek-Flash</div>
   <label>API Key（只存在这台手机）</label>
   <input id="key" type="password" placeholder="sk-...">
   <div class="btns">
@@ -699,6 +701,23 @@ async function openMemory() {
 }
 $('#memClose').onclick = () => $('#sheet-memory').classList.remove('on');
 
+function normBase(raw) {
+  let b = String(raw || '').trim();
+  if (!b) return '';
+  if (!/^https?:\/\//i.test(b)) b = 'https://' + b;
+  // 页面是 https 时，把 http 自动升成 https（不然浏览器直接拦掉）
+  if (location.protocol === 'https:' && /^http:\/\//i.test(b)) b = b.replace(/^http:\/\//i, 'https://');
+  b = b.replace(/\/+$/, '');
+  if (!/\/v\d+$/i.test(b) && !/\/api\/v\d+$/i.test(b)) b += '/v1';
+  return b;
+}
+
+// 常见写错的地方，直接说清楚
+function baseProblem(b) {
+  if (location.protocol === 'https:' && /^http:\/\//i.test(b)) return '地址是 http，页面是 https，浏览器会拦——改成 https';
+  return '';
+}
+
 async function probeApi(api) {
   if (!api?.base || !api?.model || !api?.key) return null;
   try {
@@ -728,9 +747,12 @@ async function openSet() {
 $('#setClose').onclick = () => $('#sheet-set').classList.remove('on');
 
 $('#saveApi').onclick = async () => {
-  const base = $('#base').value.trim(), model = $('#model').value.trim(), key = $('#key').value.trim();
+  const base = normBase($('#base').value), model = $('#model').value.trim(), key = $('#key').value.trim();
   const msg = $('#apiMsg');
   if (!base || !model || !key) { msg.style.color = '#e8173d'; msg.textContent = '三项都要填'; return; }
+  const bp = baseProblem(base);
+  if (bp) { msg.style.color = '#e8173d'; msg.textContent = bp; return; }
+  $('#base').value = base;
   msg.style.color = ''; msg.textContent = '正在连…';
   try {
     await Store.setKV('api', {base, model, key, vision: $('#vision').value.trim()});
@@ -766,7 +788,7 @@ $('#saveApi').onclick = async () => {
 };
 
 $('#testApi').onclick = async () => {
-  const base = $('#base').value.trim(), model = $('#model').value.trim(), key = $('#key').value.trim();
+  const base = normBase($('#base').value), model = $('#model').value.trim(), key = $('#key').value.trim();
   if (!base || !model || !key) { $('#packMsg').textContent = '三项都要填'; return; }
   const msg2 = $('#apiMsg'); msg2.style.color = ''; msg2.textContent = '测试中…';
   try {
