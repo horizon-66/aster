@@ -182,6 +182,21 @@ async function runTool(name, args) {
   return '没有这个工具';
 }
 
+/* 联网搜索：优先用供应商自带的（不额外掏钱、不用另配 key）
+   dashscope → enable_search；moonshot → 内置 $web_search；zhipu → web_search 工具 */
+function webSearchPatch(provider, body) {
+  if (provider === 'dashscope') { body.enable_search = true; return 'dashscope'; }
+  if (provider === 'moonshot') {
+    body.tools = (body.tools || []).concat([{type: 'builtin_function', function: {name: '$web_search'}}]);
+    return 'moonshot';
+  }
+  if (provider === 'zhipu') {
+    body.tools = (body.tools || []).concat([{type: 'web_search', web_search: {enable: true}}]);
+    return 'zhipu';
+  }
+  return '';
+}
+
 async function chat(text, opts = {}) {
   const cfg = (await Store.getKV('api', null));
   if (!cfg || !cfg.key) throw new Error('还没配 API：设置 → 填 Base URL、模型名、Key');
@@ -207,6 +222,8 @@ async function chat(text, opts = {}) {
     tools: TOOLS,
     tool_choice: 'auto',
   };
+  const provider = (localStorage.getItem('aster.provider') || '').trim();
+  body.__search = webSearchPatch(provider, body);
   const t0 = performance.now();
   const url = cfg.base.replace(/\/$/, '') + '/chat/completions';
   let r;
