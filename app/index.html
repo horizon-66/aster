@@ -473,14 +473,17 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   <h2>设置</h2>
   <label>Base URL</label>
   <input id="base" placeholder="https://api.deepseek.com/v1">
+  <div class="hint">写 https，结尾带 /v1；少写了会自动补</div>
   <label>模型名</label>
   <input id="model" placeholder="deepseek-chat">
+  <div class="hint">DeepSeek 就是 deepseek-chat，别写 deepseek-Flash</div>
   <label>API Key（只存在这台手机）</label>
   <input id="key" type="password" placeholder="sk-...">
   <div class="btns">
-    <button id="saveApi">保存</button>
+    <button id="saveApi">保存并连接</button>
     <button class="ghost" id="testApi">测试</button>
   </div>
+  <div class="hint" id="apiMsg" style="min-height:18px">还没连过</div>
   <label style="margin-top:14px">识图模型（选填，拍照记账用）</label>
   <input id="vision" placeholder="如 gpt-4o-mini / qwen-vl-max">
   <h2 style="margin-top:18px">音效</h2>
@@ -698,18 +701,86 @@ async function openMemory() {
 }
 $('#memClose').onclick = () => $('#sheet-memory').classList.remove('on');
 
+function normBase(raw) {
+  let b = String(raw || '').trim();
+  if (!b) return '';
+  if (!/^https?:\/\//i.test(b)) b = 'https://' + b;
+  // 页面是 https 时，把 http 自动升成 https（不然浏览器直接拦掉）
+  if (location.protocol === 'https:' && /^http:\/\//i.test(b)) b = b.replace(/^http:\/\//i, 'https://');
+  b = b.replace(/\/+$/, '');
+  if (!/\/v\d+$/i.test(b) && !/\/api\/v\d+$/i.test(b)) b += '/v1';
+  return b;
+}
+
+// 常见写错的地方，直接说清楚
+function baseProblem(b) {
+  if (location.protocol === 'https:' && /^http:\/\//i.test(b)) return '地址是 http，页面是 https，浏览器会拦——改成 https';
+  return '';
+}
+
+async function probeApi(api) {
+  if (!api?.base || !api?.model || !api?.key) return null;
+  try {
+    const r = await fetch(api.base.replace(/\/$/, '') + '/chat/completions', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + api.key},
+      body: JSON.stringify({model: api.model, messages: [{role: 'user', content: '在吗'}], max_tokens: 2}),
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
 async function openSet() {
   const api = await Store.getKV('api', null);
   if (api) { $('#base').value = api.base || ''; $('#model').value = api.model || ''; $('#key').value = api.key || ''; $('#vision').value = api.vision || ''; }
   $('#sheet-set').classList.add('on');
+  const msg = $('#apiMsg');
+  if (api?.key) {
+    msg.textContent = '上次存的：' + (api.model || '') + '，正在确认…';
+    const ok = await probeApi(api);
+    if (ok === true) { msg.style.color = '#3ecf8e'; msg.textContent = '已连上 · ' + api.model + ' · ' + api.base; }
+    else if (ok === false) { msg.style.color = '#e8173d'; msg.textContent = '连不上 · 检查 key / 地址 / 是否用 https 打开'; }
+  } else {
+    msg.textContent = '还没有 key——填好点「保存并连接」';
+  }
 }
 $('#setClose').onclick = () => $('#sheet-set').classList.remove('on');
 
 $('#saveApi').onclick = async () => {
-  const base = $('#base').value.trim(), model = $('#model').value.trim(), key = $('#key').value.trim();
-  if (!base || !model || !key) { $('#packMsg').textContent = '三项都要填'; return; }
-  await Store.setKV('api', {base, model, key, vision: $('#vision').value.trim()});
-  $('#packMsg').textContent = '存好了（只在这台手机上）';
+  const base = normBase($('#base').value), model = $('#model').value.trim(), key = $('#key').value.trim();
+  const msg = $('#apiMsg');
+  if (!base || !model || !key) { msg.style.color = '#e8173d'; msg.textContent = '三项都要填'; return; }
+  const bp = baseProblem(base);
+  if (bp) { msg.style.color = '#e8173d'; msg.textContent = bp; return; }
+  $('#base').value = base;
+  msg.style.color = ''; msg.textContent = '正在连…';
+  try {
+    await Store.setKV('api', {base, model, key, vision: $('#vision').value.trim()});
+  } catch (e) {
+    msg.style.color = '#e8173d'; msg.textContent = '存不下来：' + e.message; return;
+  }
+  // 存完立刻打一次真请求，连上就说连上了
+  try {
+    const t0 = Date.now();
+    const r = await fetch(base.replace(/\/$/, '') + '/chat/completions', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + key},
+      body: JSON.stringify({model, messages: [{role: 'user', content: '在吗'}], max_tokens: 4}),
+    });
+    const ms = Date.now() - t0;
+    if (r.ok) {
+      msg.style.color = '#3ecf8e';
+      msg.textContent = '已连上 · ' + model + ' · ' + ms + 'ms';
+      document.getElementById('connDot')?.classList.add('on');
+    } else {
+      const txt = await r.text().catch(() => '');
+      msg.style.color = '#e8173d';
+      msg.textContent = '没连上：HTTP ' + r.status + ' ' + txt.slice(0, 80);
+    }
+  } catch (e) {
+    msg.style.color = '#e8173d';
+    msg.textContent = '连不上：' + (e.message || '网络被拦') + '\n要在 https 网址里打开（不能用本地文件），地址也要带 /v1';
+  }
   status(localStorage.getItem('aster.lang.m')==='en' ? `${await Store.count()} records` : `${await Store.count()} 条记忆`);
   const cnt = document.getElementById('count');
   if (cnt) cnt.textContent = localStorage.getItem('aster.lang.m')==='en'
@@ -717,17 +788,18 @@ $('#saveApi').onclick = async () => {
 };
 
 $('#testApi').onclick = async () => {
-  const base = $('#base').value.trim(), model = $('#model').value.trim(), key = $('#key').value.trim();
+  const base = normBase($('#base').value), model = $('#model').value.trim(), key = $('#key').value.trim();
   if (!base || !model || !key) { $('#packMsg').textContent = '三项都要填'; return; }
-  $('#packMsg').textContent = '测试中…';
+  const msg2 = $('#apiMsg'); msg2.style.color = ''; msg2.textContent = '测试中…';
   try {
     const r = await fetch(base.replace(/\/$/, '') + '/chat/completions', {
       method: 'POST',
       headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + key},
       body: JSON.stringify({model, messages: [{role: 'user', content: '在吗'}], max_tokens: 8}),
     });
-    $('#packMsg').textContent = r.ok ? '通了' : `没通：HTTP ${r.status}`;
-  } catch (e) { $('#packMsg').textContent = '没通：' + e.message; }
+    if (r.ok) { msg2.style.color = '#3ecf8e'; msg2.textContent = '通了'; }
+    else { msg2.style.color = '#e8173d'; msg2.textContent = `没通：HTTP ${r.status}`; }
+  } catch (e) { msg2.style.color = '#e8173d'; msg2.textContent = '没通：' + e.message; }
 };
 
 $('#exportPack').onclick = async () => {
