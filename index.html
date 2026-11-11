@@ -349,7 +349,7 @@
   #top .lede{color:rgba(245,244,242,.72)}
   #top .note{color:rgba(245,244,242,.42)}
   #top .art::before{background:radial-gradient(circle, rgba(232,23,61,.28) 0%, rgba(232,23,61,0) 66%)}
-  #top .art::after{border-color:rgba(255,255,255,.10)}
+  #top .art::after{border-color:rgba(255,255,255,.13)}
   section{border-top:1px solid var(--line)}
   section::before{background:rgba(255,255,255,.22)}
   h2,h3{color:#fff}
@@ -386,15 +386,21 @@
   .price,.faq details[open]{background:rgba(255,255,255,.06)}
 
   html,body{max-width:100%;overflow-x:hidden}
-  /* 手机：首屏取消网格，改单列块，彻底避免超宽 */
+  /* 手机首屏：标题 / 螺旋 / 简介，三段分开（2026-11-11 定稿） */
   @media (max-width:860px){
-    #top > .heroInner{display:block!important;width:auto!important;max-width:none!important;
-      padding:30px 20px 40px!important;min-height:0!important;overflow:visible!important}
-    #top .art{display:flex;justify-content:center;margin:0 0 14px}
-    #top .art canvas{width:150px!important}
-    #top .lede{max-width:none!important;width:auto!important;word-break:break-word}
+    #top > .heroInner{display:flex!important;flex-direction:column;width:auto!important;max-width:none!important;
+      padding:18px 20px 26px!important;min-height:0!important;overflow:visible!important;gap:0!important}
+    #top .art{display:flex;justify-content:center;order:0;margin:96px 0 84px!important;opacity:.92}
+    #top .art canvas{width:168px!important;height:168px!important}
+    #top .art::after{display:block!important;width:252px!important;height:252px!important;aspect-ratio:auto;
+      border:1px solid rgba(255,255,255,.14)!important;background:none}
+    #top .art::before{width:330px!important;height:330px!important;aspect-ratio:auto;opacity:1;
+      background:radial-gradient(circle, rgba(232,23,61,.42) 0%, rgba(232,23,61,.14) 36%, rgba(232,23,61,0) 70%)}
+    #top .lede{max-width:none!important;width:auto!important;word-break:break-word;margin-top:0!important}
     #top h1{font-size:clamp(26px,7.4vw,36px)!important;line-height:1.16!important;word-break:break-word}
+    #top .cta{margin-top:22px}
   }
+
 </style>
 </head>
 <body>
@@ -682,5 +688,17 @@
     sync();
   });
 </script>
-</body>
+<script>
+(function () {
+  const art = document.querySelector('#top .art');
+  const h1 = document.querySelector('#top h1');
+  if (!art || !h1) return;
+  const place = () => {
+    if (innerWidth <= 860) { if (h1.nextElementSibling !== art) h1.after(art); }
+    else if (art.parentElement && art.parentElement.id === 'top') { /* 桌面保持原位 */ }
+  };
+  place();
+  addEventListener('resize', place);
+})();
+</script></body>
 </html>
