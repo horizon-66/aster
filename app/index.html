@@ -276,6 +276,14 @@
   body.view-home #recentList{padding-bottom:24px}
   #paneWork{flex-direction:column;gap:10px}
   #paneWork .items,#paneCal .items{display:flex;flex-direction:column;gap:8px}
+  .banner{display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;
+    padding:7px 14px;font-size:12.5px;line-height:1.6;background:rgba(232,23,61,.10);
+    color:#ffb3c1;border-bottom:1px solid rgba(232,23,61,.18)}
+  html.light .banner{background:#fdeef1;color:#a8102c;border-bottom-color:rgba(232,23,61,.12)}
+  .banner[hidden]{display:none}
+  .banner button{border:1px solid currentColor;background:transparent;color:inherit;
+    border-radius:999px;padding:3px 10px;font-size:11.5px}
+  .banner .off{background:rgba(232,23,61,.16)}
 </style>
 </head>
 <body>
@@ -293,7 +301,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     <p>即便这程序终有沉寂的一天，<br>那些相伴留下的点滴，依旧归你所有。</p>
     <p class="dim">它的上限不在于 AI 有多聪明，<br>而在于能否完好承载人与它交互演化的全部过往。</p>
     <p class="dim">这些话不是模板。每一句，都是我要活的。</p>
-    <button class="go">进来吧</button>
+    <button class="go">进入</button>
     <div class="slogan">陪着你，慢慢生长</div>
   </div>
 </div>
@@ -359,6 +367,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   <button id="newTopic" title="开一个新话题" style="margin-left:10px;padding:6px 12px;border-radius:999px;
     border:1px solid rgba(232,23,61,.25);background:transparent;color:#c8143a;font-size:11.5px">新话题</button>
 </header>
+<div id="banner" class="banner" hidden></div>
 
 <div class="presence">
   <img class="dot" id="myAvatar" alt="" src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2776%27%20height%3D%2776%27%3E%3Cdefs%3E%3CradialGradient%20id%3D%27g%27%20cx%3D%2738%25%27%20cy%3D%2732%25%27%3E%3Cstop%20offset%3D%270%25%27%20stop-color%3D%27%23ffffff%27/%3E%3Cstop%20offset%3D%2755%25%27%20stop-color%3D%27%23ff8fa3%27/%3E%3Cstop%20offset%3D%27100%25%27%20stop-color%3D%27%23e8173d%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect%20width%3D%2776%27%20height%3D%2776%27%20rx%3D%2722%27%20fill%3D%27url%28%23g%29%27/%3E%3C/svg%3E">
@@ -471,6 +480,12 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 <!-- 设置 -->
 <div class="sheet" id="sheet-set">
   <h2>设置</h2>
+  <label>服务商</label>
+  <div class="chips-line" id="providerChips">
+    <button data-p="deepseek" class="on">DeepSeek</button>
+    <button data-p="openai">OpenAI</button>
+    <button data-p="custom">自定义</button>
+  </div>
   <label>Base URL</label>
   <input id="base" placeholder="https://api.deepseek.com/v1">
   <div class="hint">写 https，结尾带 /v1；少写了会自动补</div>
@@ -484,8 +499,11 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     <button class="ghost" id="testApi">测试</button>
   </div>
   <div class="hint" id="apiMsg" style="min-height:18px">还没连过</div>
-  <label style="margin-top:14px">识图模型（选填，拍照记账用）</label>
+  <details style="margin-top:12px">
+  <summary style="font-size:13px;color:#8f8f97;cursor:pointer">高级设置</summary>
+  <label style="margin-top:10px">识图模型（选填，拍照记账用）</label>
   <input id="vision" placeholder="如 gpt-4o-mini / qwen-vl-max">
+  </details>
   <h2 style="margin-top:18px">音效</h2>
   <div class="chips-line" id="soundChips">
     <button data-sound="1" class="on">开</button>
@@ -531,6 +549,17 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   <h2 style="margin-top:18px">初识</h2>
   <div class="btns"><button id="redoOnboarding">重新做一遍初识</button></div>
   <div class="hint">会重新问那四个问题，记忆和记录都不动</div>
+
+  <h2 style="margin-top:18px">声音</h2>
+  <div class="hint" id="voiceLockLine">正在看声音规格…</div>
+
+  <h2 style="margin-top:18px">放到主屏</h2>
+  <div class="hint" id="installHint">像 App 一样打开，不会被系统当成网页清掉</div>
+  <div class="btns"><button id="installBtn">怎么加</button></div>
+
+  <h2 style="margin-top:18px">记忆</h2>
+  <div class="hint" id="memLoopM" style="white-space:pre-line">尚未检查</div>
+  <div class="btns"><button id="memLoopBtn">检查记忆完整性</button></div>
 
   <h2 style="margin-top:18px">记忆包</h2>
   <div class="hint">导出给电脑用，或把电脑那份导进来。只在这台手机上，不上传。</div>
@@ -619,6 +648,7 @@ restoreHistory().catch(() => {});
 setTimeout(() => { compactMemory().catch(() => {}); }, 3000);
 
 $('#send').onclick = async () => {
+  window.__stopIntro && window.__stopIntro();   // 他开口了，开场乐收掉
   const ta = $('#text');
   const t = ta.value.trim();
   if (!t) return;
@@ -654,6 +684,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = async () => {
     document.querySelectorAll('nav button').forEach(x => x.classList.remove('on'));
     b.classList.add('on');
     document.getElementById('viewChat').classList.add('on');
+    window.__sfx && window.__sfx('view', 0.2);
     ['sheet-memory','sheet-set','sheet-work'].forEach(id => document.getElementById(id).classList.remove('on'));
     return;
   }
@@ -746,6 +777,21 @@ async function openSet() {
 }
 $('#setClose').onclick = () => $('#sheet-set').classList.remove('on');
 
+// 选服务商 = 自动填好地址和模型，普通人只需要贴一个 key
+const PROVIDERS = {
+  deepseek: {base: 'https://api.deepseek.com/v1', model: 'deepseek-chat'},
+  openai: {base: 'https://api.openai.com/v1', model: 'gpt-4o-mini'},
+  custom: {base: '', model: ''},
+};
+document.getElementById('providerChips')?.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  const pid = b.dataset.p;
+  document.querySelectorAll('#providerChips button').forEach(x => x.classList.toggle('on', x === b));
+  const cfg = PROVIDERS[pid] || {};
+  if (cfg.base) { $('#base').value = cfg.base; $('#model').value = cfg.model; }
+  if (pid === 'custom') { $('#base').value = ''; $('#model').value = ''; }
+});
+
 $('#saveApi').onclick = async () => {
   const base = normBase($('#base').value), model = $('#model').value.trim(), key = $('#key').value.trim();
   const msg = $('#apiMsg');
@@ -775,11 +821,14 @@ $('#saveApi').onclick = async () => {
     } else {
       const txt = await r.text().catch(() => '');
       msg.style.color = '#e8173d';
-      msg.textContent = '没连上：HTTP ' + r.status + ' ' + txt.slice(0, 80);
+      msg.textContent = r.status === 401 ? '密钥不对：请检查 API Key'
+        : r.status === 404 ? '地址不对：检查 Base URL 是否以 /v1 结尾'
+        : r.status === 429 ? '请求太频繁或额度用完'
+        : '连接失败（HTTP ' + r.status + '）';
     }
   } catch (e) {
     msg.style.color = '#e8173d';
-    msg.textContent = '连不上：' + (e.message || '网络被拦') + '\n要在 https 网址里打开（不能用本地文件），地址也要带 /v1';
+    msg.textContent = '连不上：可能是网络被拦。请确认用 https 打开页面，且地址以 /v1 结尾';
   }
   status(localStorage.getItem('aster.lang.m')==='en' ? `${await Store.count()} records` : `${await Store.count()} 条记忆`);
   const cnt = document.getElementById('count');
@@ -809,6 +858,9 @@ $('#exportPack').onclick = async () => {
   a.href = URL.createObjectURL(blob);
   a.download = `aster-memory-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
+  // 记住这次导出，之后用来判断要不要提醒
+  localStorage.setItem('aster.lastExportAt', String(Date.now()));
+  localStorage.setItem('aster.lastExportCount', String(await Store.count()));
   $('#packMsg').textContent = `导出 ${pack.items.length} 条。建议存到网盘或电脑`;
 };
 
@@ -1297,13 +1349,14 @@ document.getElementById('deskLink')?.addEventListener('click', () => {
         const d = document.createElement('div');
         d.className = 'opt' + (ans[q.k] === v ? ' sel' : '');
         d.textContent = label;
-        d.onclick = () => { ans[q.k] = v; paint(); };
+        d.onclick = () => { ans[q.k] = v; window.__sfx && window.__sfx('tap', 0.28); paint(); };
         opts.appendChild(d);
       });
     }
   }
 
   document.getElementById('obNext').onclick = async () => {
+    window.__sfx && window.__sfx('tap', 0.3);
     const q = QS[i];
     if (q.type === 'text') ans[q.k] = document.getElementById('obInput').value.trim();
     if (i < QS.length - 1) { i += 1; paint(); return; }
@@ -1320,9 +1373,14 @@ document.getElementById('deskLink')?.addEventListener('click', () => {
     if (ans.forbidden && ans.forbidden !== '暂时没有') bits.push('不想提：' + ans.forbidden);
     if (bits.length) await Store.add('初识：' + bits.join('，'), '初识', 'core');
     show(false);
+    window.__sfxDone && window.__sfxDone();
+    window.__duckIntro && window.__duckIntro(0.14);
     add('我记住了', 'her');
   };
-  document.getElementById('obSkip').onclick = async () => { await Store.setKV('onboarding', {skip: true}); show(false); };
+  document.getElementById('obSkip').onclick = async () => {
+    window.__duckIntro && window.__duckIntro(0.14);
+    await Store.setKV('onboarding', {skip: true}); show(false);
+  };
 
   (async () => {
     const q = new URLSearchParams(location.search);
@@ -1519,7 +1577,7 @@ document.getElementById('deskLink')?.addEventListener('click', () => {
     "识图模型（选填，拍照记账用）": "Vision model (optional, for photo bills)",
     "跳过初识": "Skip",
     "还没有记忆，聊几句就有了": "No memory yet. Talk a little and it starts",
-    "进来吧": "Come in",
+    "进入": "Come in",
     "连接桌面（主库）· 需原生版": "Pair with desktop · native app only",
     "配对": "Pair",
     "陪着你，慢慢生长": "Growing, slowly, with you",
@@ -1636,10 +1694,11 @@ document.getElementById('newTopic')?.addEventListener('click', async () => {
   const SKEY = 'aster.sound';
   const on = () => localStorage.getItem(SKEY) !== '0';
   const audio = {};
+  const SRC = { tap: 'sfx/tap.m4a', done: 'sfx/done.m4a', view: 'sfx/view.m4a', stage: 'sfx/stage.m4a', open: 'sfx/open.m4a' };
   const play = (name, vol = 0.7) => {
     if (!on()) return;
     try {
-      audio[name] = audio[name] || new Audio(name + '.m4a');
+      audio[name] = audio[name] || new Audio(SRC[name] || (name + '.m4a'));
       audio[name].volume = vol;
       audio[name].currentTime = 0;
       audio[name].play().catch(() => {});
@@ -1647,10 +1706,44 @@ document.getElementById('newTopic')?.addEventListener('click', async () => {
   };
   window.__play = play;
 
-  // 开场：能自动播就播，被拦了等第一次点击
-  play('intro', 0.5);
-  const kick = () => { play('intro', 0.5); document.removeEventListener('pointerdown', kick); };
+  // 开场音乐：一路放，进主界面只是压低，不停
+  let openAudio = null, duckTimer = null;
+  const startOpen = () => {
+    if (!on()) return;
+    try {
+      openAudio = openAudio || new Audio('sfx/open.m4a');
+      openAudio.loop = true; openAudio.volume = 0.42;
+      openAudio.play().catch(() => {});
+    } catch (e) {}
+  };
+  window.__duckIntro = (to = 0.14) => {
+    if (!openAudio) return;
+    clearInterval(duckTimer);
+    duckTimer = setInterval(() => {
+      const v = openAudio.volume;
+      if (Math.abs(v - to) < 0.01) { openAudio.volume = to; clearInterval(duckTimer); return; }
+      openAudio.volume = v + (to - v) * 0.12;
+    }, 90);
+  };
+  window.__stopIntro = () => {
+    if (!openAudio) return;
+    clearInterval(duckTimer);
+    const a = openAudio; openAudio = null;
+    let v = a.volume;
+    const t = setInterval(() => {
+      v = Math.max(0, v - 0.03); a.volume = v;
+      if (v <= 0) { clearInterval(t); a.pause(); }
+    }, 80);
+  };
+  startOpen();
+  const kick = () => { startOpen(); document.removeEventListener('pointerdown', kick); };
   document.addEventListener('pointerdown', kick, {once: true});
+
+  /* 界面音：轻、短，不做满 */
+  const sfx = (n, v) => { try { play(n, v ?? 0.35); } catch {} };
+  // 问卷答完：一声「完成」
+  window.__sfxDone = () => sfx('done', 0.3);
+  window.__sfx = sfx;
 
   // 问卷：每题读出来
   const speakQ = (i) => play('q' + (i + 1), 0.85);
@@ -1854,7 +1947,7 @@ document.getElementById('newTopic')?.addEventListener('click', async () => {
     }, 90);
   };
 
-  // 信显示时开，点「进来吧」关
+  // 信显示时开，点「进入」关
   const obs = new MutationObserver(() => {
     if (!box.classList.contains('hide')) start();
   });
@@ -1915,6 +2008,174 @@ document.getElementById('redoOnboarding')?.addEventListener('click', async () =>
   if (window.__openOnboarding) window.__openOnboarding();
   else location.reload();
 });
+
+/* 记忆闭环自检：手机上没引擎，就自测本机存储 */
+document.getElementById('memLoopBtn')?.addEventListener('click', async () => {
+  const el = document.getElementById('memLoopM');
+  el.style.color = ''; el.textContent = '检查中…';
+  try {
+    const token = '探针' + Math.random().toString(36).slice(2, 8);
+    await Store.add('我说：闭环' + token, '自检', 'core');
+    const items = await Store.all(50);
+    const hit = items.some(x => (x.text || '').includes(token));
+    const latest = items.find(x => !(x.text || '').includes(token));
+    el.style.color = hit ? '#3ecf8e' : '#e8173d';
+    el.textContent = hit
+      ? `临时记录：存储正常（本机 ${await Store.count()} 条，能写也能读回来）` +
+        (latest && latest.text ? `\n最近记得：${String(latest.text).replace(/^我说：/, '').slice(0, 40)}` : '')
+      : '临时记录：存不住（写进去了但读不回来）';
+  } catch (e) {
+    el.style.color = '#e8173d';
+    el.textContent = '临时记录：检查失败（' + e.message + '）';
+  }
+});
+
+/* ---------- 版本自检 / 离线 / 主屏引导 / 导出提醒 ---------- */
+(function () {
+  // 装在原生壳里（鸿蒙/安卓）时，它已经在桌面上了，不用再「加主屏」
+  const native = new URLSearchParams(location.search).get('native') || window.__ASTER_NATIVE || '';
+  if (native) {
+    const h = document.getElementById('installHint');
+    const b = document.getElementById('installBtn');
+    if (h) h.textContent = native === 'harmony'
+      ? '已经在桌面上了；想要的话可以把「今天」做成服务卡片'
+      : '已经在桌面上了';
+    if (b) b.style.display = 'none';
+  }
+  const bar = document.getElementById('banner');
+  const say = (html, tone) => {
+    if (!bar) return;
+    bar.className = 'banner' + (tone === 'warn' ? ' off' : '');
+    bar.innerHTML = html;
+    bar.hidden = false;
+  };
+  const hide = () => { if (bar) bar.hidden = true; };
+
+  /* 1) 离线：先存本机，别让人以为坏了 */
+  const netLine = () => say('现在没网 · 你说的先存在这台手机上，来了网再送过去',
+    'warn');
+  window.addEventListener('offline', netLine);
+  window.addEventListener('online', () => { hide(); });
+  if (!navigator.onLine) netLine();
+
+  /* 2) 版本自检：不强制刷新，给一条提示 */
+  // 上次看到的构建号记在本机：下次打开发现变了就提示，不打断当前对话
+  let BUILD = localStorage.getItem('aster.build') || null;
+  let lastCheck = 0;
+  async function checkVersion(force) {
+    if (!force && Date.now() - lastCheck < 5 * 60 * 1000) return;
+    lastCheck = Date.now();
+    try {
+      const r = await fetch('version.json?_=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (!d || !d.build) return;
+      if (!BUILD) { BUILD = d.build; localStorage.setItem('aster.build', BUILD); return; }
+      if (d.build !== BUILD) {
+        say('有新版本了 · 现在用的还是旧的',
+            'warn');
+        const b = document.createElement('button');
+        b.textContent = '现在换上';
+        b.onclick = () => { localStorage.setItem('aster.build', d.build); location.reload(); };
+        bar.appendChild(b);
+        const c = document.createElement('button');
+        c.textContent = '下次';
+        c.onclick = hide;
+        bar.appendChild(c);
+      }
+    } catch {}
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { checkVersion(false); checkExport(); }
+  });
+  checkVersion(true);
+  // 主存空了但快照里有东西 → 自动回灌（浏览器清了 IDB 也能救回来）
+  (async () => {
+    try {
+      const n = await Store.count();
+      const snap = Store.snapshotInfo();
+      if (n === 0 && snap && snap.count > 0) {
+        const back = await Store.restoreFromSnapshot();
+        if (back > 0) say('把上次的快照找回来了 · ' + back + ' 条', 'warn');
+      }
+    } catch {}
+  })();
+
+  (async () => {
+    try {
+      if (!localStorage.getItem('aster.lastExportAt')) {
+        const n = await Store.count();
+        if (n > 0) {
+          localStorage.setItem('aster.lastExportAt', String(Date.now()));
+          localStorage.setItem('aster.lastExportCount', String(n));
+        }
+      }
+    } catch {}
+  })();
+
+  /* 3) 主屏引导：ios 只能在设置页提示，安卓用系统的安装事件 */
+  let installEvent = null;
+  if (!native) window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault(); installEvent = e;
+    if (localStorage.getItem('aster.installPrompted')) return;
+    say('把 Aster 放到主屏，像 App 一样打开',
+        'warn');
+    const b = document.createElement('button');
+    b.textContent = '放到主屏';
+    b.onclick = async () => { try { installEvent.prompt(); } catch {} hide(); };
+    bar.appendChild(b);
+    const c = document.createElement('button');
+    c.textContent = '不用';
+    c.onclick = () => { localStorage.setItem('aster.installPrompted', '1'); hide(); };
+    bar.appendChild(c);
+  });
+
+  /* 4) 导出提醒：距上次导出 ≥7 天 且新增 ≥20 条 */
+  async function checkExport() {
+    try {
+      const last = Number(localStorage.getItem('aster.lastExportAt') || 0);
+      const n = await Store.count();
+      const base = Number(localStorage.getItem('aster.lastExportCount') || 0);
+      if (!last) return;
+      const days = (Date.now() - last) / 86400000;
+      if (days >= 7 && n - base >= 20) {
+        say('这台手机上已经有 ' + n + ' 条了 · 导出一份留底更稳', 'warn');
+        const b = document.createElement('button');
+        b.textContent = '现在导出';
+        b.onclick = () => { document.getElementById('exportPack')?.click(); hide(); };
+        bar.appendChild(b);
+        const c = document.createElement('button');
+        c.textContent = '过几天';
+        c.onclick = hide;
+        bar.appendChild(c);
+      }
+    } catch {}
+  }
+  window.__checkExport = checkExport;
+})();
+
+document.getElementById('installBtn')?.addEventListener('click', () => {
+  const el = document.getElementById('installHint');
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  el.textContent = ios
+    ? 'Safari 里点底部「分享」→ 往下找「添加到主屏幕」→ 添加'
+    : '浏览器菜单（右上角三个点）→「添加到主屏幕」或「安装应用」';
+});
+
+/* 声音规格：网页版只能比「规格文件在不在、有没有设定」，发声本身在桌面端 */
+(async () => {
+  const el = document.getElementById('voiceLockLine');
+  if (!el) return;
+  try {
+    const r = await fetch('voice.lock.json?_=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) { el.textContent = '没有声音规格文件'; return; }
+    const d = await r.json();
+    const set = !!(d.reference && d.reference.path);
+    el.textContent = set
+      ? `声音已设定：${d.voice_id}（${d.model.name || '本地模型'}）`
+      : '还没设定声音——现在用的是临时声，等桌面端定好会同步过来';
+  } catch { el.textContent = '声音规格读不到'; }
+})();
 </script>
 </body>
 </html>

@@ -82,7 +82,78 @@ async function guard(idbFn, lsFn) {
   catch (e) { LS_FALLBACK = true; return lsFn(); }
 }
 
+/* —— 兜底快照：IndexedDB 之外再存一份，坏了好回滚 —— */
+const SNAP_KEY = 'aster.snapshot.v1';
+let _snapTimer = null;
+
+function snapshotNow() {
+  try {
+    const d = LS.read();
+    const snap = {
+      savedAt: Date.now(),
+      count: (d.items || []).length,
+      items: (d.items || []).slice(-600),
+      kv: d.kv || {},
+      work: (d.work || []).slice(-200),
+      bill: (d.bill || []).slice(-200),
+      queue: d.queue || [],
+    };
+    localStorage.setItem(SNAP_KEY, JSON.stringify(snap));
+    return snap;
+  } catch { return null; }
+}
+
+function scheduleSnapshot() {
+  clearTimeout(_snapTimer);
+  _snapTimer = setTimeout(async () => {
+    // 主存是 IndexedDB 时，把它整体读到 LS 里当快照
+    try {
+      const items = await Store._rawAll(4000);
+      const d = LS.read();
+      d.items = items;
+      LS.write(d);
+      snapshotNow();
+    } catch { snapshotNow(); }
+  }, 900);
+}
+
+function snapshotInfo() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null');
+    return s ? { savedAt: s.savedAt, count: s.count } : null;
+  } catch { return null; }
+}
+
 const Store = {
+  /* —— 快照（双写兜底） —— */
+  async _rawAll(limit = 4000) {
+    return guard(async () => {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const req = db.transaction('memory', 'readonly').objectStore('memory')
+          .index('created').openCursor(null, 'prev');
+        const out = [];
+        req.onsuccess = () => {
+          const cur = req.result;
+          if (!cur || out.length >= limit) return resolve(out.reverse());
+          out.push(cur.value); cur.continue();
+        };
+        req.onerror = () => reject(req.error);
+      });
+    }, () => (LS.read().items || []).slice(-limit));
+  },
+  snapshotInfo,
+  snapshotNow,
+  async restoreFromSnapshot() {
+    const s = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null');
+    if (!s) return 0;
+    let n = 0;
+    for (const it of (s.items || [])) {
+      try { await this.add(it.text, it.tag, it.kind || 'normal'); n++; } catch {}
+    }
+    return n;
+  },
+
   /* —— 待投递队列 —— */
   async queueAdd(item) {
     const rec = {id: item.id || ('q-' + Date.now() + '-' + Math.random().toString(16).slice(2, 8)),
@@ -252,11 +323,13 @@ const Store = {
   _lsAll(limit) { return LS.read().items.slice(-limit).reverse(); },
   _lsCount() { return LS.read().items.length; },
   async add(text, tag = '', kind = 'normal') {
-    return guard(async () => {
+    const r = await guard(async () => {
       const rec = {text, tag, kind, created: Date.now(), boost: 1};
       await tx('memory', 'readwrite', os => os.add(rec));
       return rec;
     }, () => Store._lsAdd(text, tag, kind));
+    scheduleSnapshot();
+    return r;
   },
   async all(limit = 400) {
     return guard(async () => {

@@ -1,0 +1,21 @@
+{
+  "voice_id": "出厂-未设定",
+  "note": "这是你的声音规格。换参考音、换模型、改后处理都必须改这里；改了就等于换人。",
+  "model": {
+    "name": "",
+    "weights": "",
+    "src": ""
+  },
+  "reference": {
+    "path": "",
+    "sha256_16": "",
+    "seconds": 0
+  },
+  "post": {
+    "pitch": 1.0,
+    "tempo": 1.0,
+    "sample_rate": 24000
+  },
+  "min_seconds": 0.6,
+  "max_seconds": 30
+}
