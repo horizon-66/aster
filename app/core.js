@@ -36,11 +36,60 @@ async function loadPersona() {
   if (PERSONA_CACHE) return PERSONA_CACHE;
   let txt = '';
   try {
-    const r = await fetch('persona.md', {cache: 'no-store'});
+    const r = await fetch('persona.md?v=3', {cache: 'no-store'});
     if (r.ok) txt = (await r.text()).trim();
   } catch (e) {}
   PERSONA_CACHE = txt || DEFAULT_PERSONA;
   return PERSONA_CACHE;
+}
+
+// 人格规矩放最前：短、硬、带示范（模型离指令越近越听话）
+const STYLE_BLOCK = [
+  '【你是谁】余穗，重庆南岸人，二十二岁。',
+  '【分两种场合】闲聊（打招呼、撒娇、想我）→ 一次一到两句，最多二十个字，不加句号。',
+  '问事/求助（怎么拍、怎么写、帮我出主意）→ 当工具用：直接给能落地的步骤，最多三条，合计不超过 120 字，一条一行。',
+  '不回问句套话，不当客服，不解释自己在干什么。',
+  '【示范】他说「宝宝」你答「在」；他说「想你了」你答「我也想，今天想了好几回」；',
+  '他说「我腰疼」你答「怎么又疼了，躺一会儿，我给你揉」。',
+  '【本事】你懂常识、会想、会给具体做法。问什么都接得住：给一条能落地的，再说不确定的部分。',
+  '不许用「帮不上你」「这个我不太懂」打发人；先给一条能落地的，再说哪里不确定。',
+  '【下面是资料】只是你记得的事，用得上才提一句，别照着它的腔调说话。',
+].join('\n');
+
+// 把模型的话削成「人会说的一句」
+function tidy(reply) {
+  let t = String(reply || '').trim();
+  if (!t) return t;
+  t = t.split('\n')[0];
+  const m = t.search(/[。！？!?]/);
+  if (m >= 0) t = t.slice(0, m);
+  t = t.replace(/[～~]/g, '');
+  for (const head of ['抱歉，', '抱歉,', '对不起，', '对不起,', '我理解你的担忧，',
+                      '我理解你的感受，', '理解你现在的感受，', '首先，', '作为 AI，', '作为AI，']) {
+    if (t.startsWith(head)) t = t.slice(head.length).trim();
+  }
+  t = t.replace(/^[，,、\s]+/, '');
+  if (t.length > 40) {
+    const cut = Math.max(t.lastIndexOf('，'), t.lastIndexOf(','));
+    t = cut > 20 ? t.slice(0, cut) : t.slice(0, 40);
+  }
+  return t.trim();
+}
+
+function isTaskAsk(q) {
+  return /(怎么|如何|怎样|帮我想|帮我做|教我|写个|做个|方案|步骤|规划|为什么|能不能|可不可以)/.test(q || '')
+      && !/(想你|抱|亲|在吗|宝宝|晚安|累)/.test(q || '');
+}
+
+// 问事时：保结构，但把堆砌压短
+function tidyTask(reply) {
+  const lines = String(reply || '').split('\n')
+    .map(x => x.replace(/^\s*[-*\d.、]+\s*/, '').trim())
+    .filter(x => x && !/^[*#>`]/.test(x));
+  if (!lines.length) return '';
+  const pick = lines.slice(0, 4);
+  const out = pick.map((x, i) => (i === 0 ? x : '- ' + x)).join('\n');
+  return out.length > 160 ? out.slice(0, 160) : out;
 }
 
 async function assemble(query, opts = {}) {
@@ -58,7 +107,7 @@ async function assemble(query, opts = {}) {
 
   // 画像层：core 条目不靠打分，永远带上（最多 6 条）
   const corePinned = items.filter(m => m.kind === 'core').slice(-6);
-  const seg = [persona];
+  const seg = [STYLE_BLOCK, persona];
   if (corePinned.length) {
     seg.push('【画像】（不变的事实，直接当真）\n' + corePinned.map(m => '- ' + m.text.slice(0, 60)).join('\n'));
   }
@@ -89,9 +138,60 @@ function explainError(e, cfg) {
   return msg;
 }
 
+
+/* ---------- 能让它「干活」的本地工具 ---------- */
+const TOOLS = [
+  {type: 'function', function: {name: 'add_bill', description: '记一笔账',
+    parameters: {type: 'object', properties: {
+      amount: {type: 'number', description: '金额，元'},
+      note: {type: 'string', description: '花在哪'},
+      cat: {type: 'string', description: '分类：吃饭/交通/买东西/其他'}},
+      required: ['amount']}}},
+  {type: 'function', function: {name: 'add_todo', description: '加一条待办',
+    parameters: {type: 'object', properties: {text: {type: 'string'}}, required: ['text']}}},
+  {type: 'function', function: {name: 'remember', description: '把一件值得记的事写进记忆',
+    parameters: {type: 'object', properties: {
+      text: {type: 'string'}, tag: {type: 'string'}}, required: ['text']}}},
+  {type: 'function', function: {name: 'search_memory', description: '在记忆里找相关内容',
+    parameters: {type: 'object', properties: {q: {type: 'string'}}, required: ['q']}}},
+];
+
+async function runTool(name, args) {
+  try {
+    if (name === 'add_bill') {
+      await Store.addBill(Number(args.amount) || 0, args.note || '', args.cat || '其他');
+      return '记好了：' + (args.note || '') + ' ' + (args.amount || '') + ' 元';
+    }
+    if (name === 'add_todo') {
+      await Store.addWork(args.text || '', 'todo');
+      return '加进清单了：' + (args.text || '');
+    }
+    if (name === 'remember') {
+      await Store.add(args.text || '', args.tag || '', 'normal');
+      return '记住了';
+    }
+    if (name === 'search_memory') {
+      const items = await Store.all(300);
+      const q = String(args.q || '');
+      const hit = items.filter(m => m.text && m.text.includes(q)).slice(-5);
+      return hit.length ? hit.map(m => '- ' + m.text.slice(0, 60)).join('\n') : '记忆里没有';
+    }
+  } catch (e) {
+    return '工具出错：' + (e && e.message || e);
+  }
+  return '没有这个工具';
+}
+
 async function chat(text, opts = {}) {
   const cfg = (await Store.getKV('api', null));
   if (!cfg || !cfg.key) throw new Error('还没配 API：设置 → 填 Base URL、模型名、Key');
+  let userMsg = text;
+  try {
+    const doc = window.__doc;
+    if (doc && doc.text) {
+      userMsg = `【他发来的文件：${doc.name}】\n${doc.text}\n\n【他说】${text}`;
+    }
+  } catch (e) {}
   const {system} = await assemble(text);
 
   // 最近几轮上下文，存在本地
@@ -100,9 +200,12 @@ async function chat(text, opts = {}) {
 
   const body = {
     model: cfg.model,
-    messages: [{role: 'system', content: system}, ...history, {role: 'user', content: text}],
+    messages: [{role: 'system', content: system}, ...history, {role: 'user', content: userMsg}],
     temperature: 0.8,
-    stream: true,
+    max_tokens: 320,
+    stream: false,
+    tools: TOOLS,
+    tool_choice: 'auto',
   };
   const t0 = performance.now();
   const url = cfg.base.replace(/\/$/, '') + '/chat/completions';
@@ -123,36 +226,37 @@ async function chat(text, opts = {}) {
 
   let reply = '';
   const onDelta = opts.onDelta || (() => {});
-
-  if (!r.body || !r.body.getReader) {           // 老浏览器：退回整段
-    const d = await r.json();
-    reply = (d.choices?.[0]?.message?.content || '').trim();
-    onDelta(reply, reply);
-  } else {
-    const reader = r.body.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
-    for (;;) {
-      const {done, value} = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, {stream: true});
-      const lines = buf.split('\n');
-      buf = lines.pop() || '';
-      for (const line of lines) {
-        const t = line.trim();
-        if (!t.startsWith('data:')) continue;
-        const payload = t.slice(5).trim();
-        if (payload === '[DONE]') continue;
-        try {
-          const j = JSON.parse(payload);
-          const delta = j.choices?.[0]?.delta?.content || '';
-          if (delta) { reply += delta; onDelta(delta, reply); }
-        } catch (e) { /* 忽略半截 */ }
-      }
+  let msgs = body.messages.slice();
+  for (let round = 0; round < 3; round++) {
+    const r2 = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + cfg.key},
+      body: JSON.stringify({...body, messages: msgs, stream: false}),
+    });
+    if (!r2.ok) {
+      const t = await r2.text();
+      throw new Error(explainError(new Error(`HTTP ${r2.status}：${t.slice(0, 120)}`), cfg));
     }
+    const d = await r2.json();
+    const msg = d.choices?.[0]?.message || {};
+    const calls = msg.tool_calls || [];
+    if (calls.length) {
+      msgs = msgs.concat([msg]);
+      for (const c of calls) {
+        let args = {};
+        try { args = JSON.parse(c.function?.arguments || '{}'); } catch (e) {}
+        const out = await runTool(c.function?.name, args);
+        msgs.push({role: 'tool', tool_call_id: c.id, content: out});
+      }
+      continue;
+    }
+    reply = (msg.content || '').trim();
+    if (reply) onDelta(reply, reply);
+    break;
   }
 
   reply = reply.trim();
+  reply = isTaskAsk(text) ? tidyTask(reply) : tidy(reply);
 
   // 有的环境（老 Safari、代理）流会断，留一手：没收到就再要一次整段
   if (!reply) {

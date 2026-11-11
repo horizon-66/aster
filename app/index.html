@@ -390,6 +390,12 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 </div>
 
 <footer>
+  <input id="docFile" type="file" accept=".txt,.md,.json,.csv,.log,.srt,.js,.py,.html,.css,.tsv" hidden>
+  <button id="docBtn" aria-label="attach" title="发文件给我看">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="width:18px;height:18px">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+  </button>
   <textarea id="text" rows="1" placeholder="说点什么…"></textarea>
   <button id="mic" aria-label="voice" title="按住说话">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="width:18px;height:18px">
@@ -653,6 +659,32 @@ let __booted = false;
 (async () => { if (__booted) return; __booted = true; await boot(); })();
 restoreHistory().catch(() => {});
 setTimeout(() => { try { if (typeof compactMemory === 'function') compactMemory().catch(() => {}); } catch (e) {} }, 3000);
+
+/* 把文件读进来当上下文（纯文本类，读不了就说清楚） */
+(function () {
+  const btn = document.getElementById('docBtn');
+  const inp = document.getElementById('docFile');
+  if (!btn || !inp) return;
+  btn.onclick = () => inp.click();
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0];
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) {
+      add('文件太大（超过 2MB），先截一小段发给我', 'sys');
+      inp.value = ''; return;
+    }
+    try {
+      const txt = await f.text();
+      window.__doc = {name: f.name, text: txt.slice(0, 8000)};
+      add('收到了：' + f.name + '（' + Math.round(txt.length / 1000) + 'k 字）', 'sys');
+      const ta = document.getElementById('text');
+      if (!ta.value.trim()) ta.value = '看看这个：' + f.name;
+    } catch (e) {
+      add('这个格式读不了（先另存成 txt/md 再发）', 'sys');
+    }
+    inp.value = '';
+  };
+})();
 
 $('#send').onclick = async () => {
   window.__stopIntro && window.__stopIntro();   // 他开口了，开场乐收掉
