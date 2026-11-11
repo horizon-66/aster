@@ -581,8 +581,8 @@ window.onerror = (m, src, line) => {
   document.getElementById('log')?.appendChild(el);
 };
 </script>
-<script src="store.js"></script>
-<script src="core.js"></script>
+<script src="store.js" onerror="document.documentElement.dataset.bootErr='store.js'"></script>
+<script src="core.js" onerror="document.documentElement.dataset.bootErr='core.js'"></script>
 <script>
 const $ = s => document.querySelector(s);
 const log = $('#log');
@@ -645,7 +645,7 @@ async function boot() {
 }
 boot();
 restoreHistory().catch(() => {});
-setTimeout(() => { compactMemory().catch(() => {}); }, 3000);
+setTimeout(() => { try { if (typeof compactMemory === 'function') compactMemory().catch(() => {}); } catch (e) {} }, 3000);
 
 $('#send').onclick = async () => {
   window.__stopIntro && window.__stopIntro();   // 他开口了，开场乐收掉
@@ -1662,7 +1662,7 @@ document.getElementById('newTopic')?.addEventListener('click', async () => {
   const paint = (data) => {
     if (data) { img.src = data; img.style.background = 'transparent'; }
   };
-  Store.getKV(KEY, null).then(paint);
+  try { Store.getKV(KEY, null).then(paint); } catch (e) {}
   img.onclick = () => {
     const f = document.createElement('input');
     f.type = 'file'; f.accept = 'image/*';
