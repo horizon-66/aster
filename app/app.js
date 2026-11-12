@@ -1466,7 +1466,8 @@ document.getElementById('newTopic')?.addEventListener('click', async () => {
   window.__sfx = sfx;
 
   // 问卷：每题读出来
-  const speakQ = (i) => play('q' + (i + 1), 0.85);
+  // 2026-11-12：英文环境放 q1en–q4en，没录过就退回中文
+  const speakQ = (i) => { try { const en = (document.documentElement.lang||'').toLowerCase().startsWith('en'); play('q' + (i + 1) + (en ? 'en' : ''), 0.85); } catch (e) { play('q' + (i + 1), 0.85); } };
   window.__speakQ = speakQ;
 })();
 

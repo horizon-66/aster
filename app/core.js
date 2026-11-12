@@ -154,6 +154,38 @@ function needRecall(q) {
   return false;
 }
 
+// 2026-11-12 夜：关系不是填出来的，是从对话里看出来的（把引擎那套搬到网页端）
+const REL_W = {
+  '恋人': [[/老婆|宝贝|亲爱的|爱你|想你了|舍不得|抱抱|亲亲/, 3], [/撒娇|想你|陪我|你别走|想见你/, 2]],
+  '同事': [[/麻烦你|请问|谢谢您|麻烦帮/, 2], [/方案|会议|汇报|进度|排期|对接|交付/, 1]],
+  '家人': [[/爸妈|外婆|奶奶|爷爷|家里人|过年回家/, 1]],
+  '挚友': [[/兄弟|老铁|知己|我信你|只有你懂|跟你聊得来/, 2]],
+  '顾问': [[/分析一下|梳理|决策|利弊|怎么选|给个结论|方案对比/, 2]],
+  '生活搭子': [[/提醒我|打卡|日程|几点|记得叫我|安排一下|清单/, 2]],
+};
+const REL_CN = {
+  '恋人': '他想跟你亲近，可以软一点', '同事': '这是同事的距离，别亲昵',
+  '家人': '像家里人那样说话', '挚友': '朋友，可以损两句',
+  '顾问': '他要结论，别铺垫', '生活搭子': '搭子，办事为主', '朋友': '普通朋友的分寸',
+};
+function inferRelation(text, turns) {
+  const past = (turns || []).filter(t => t.role === 'user').map(t => t.content).join('\n');
+  const all = past + '\n' + String(text || '');
+  const sc = {};
+  for (const [k, rs] of Object.entries(REL_W)) {
+    sc[k] = rs.reduce((a, [re, w]) => a + (re.test(all) ? w : 0), 0);
+  }
+  const close = /吃了|睡了|回家了|下班|到家|做饭|洗衣|房租|水电/.test(all) ? 1 : 0;
+  const best = Object.entries(sc).sort((a, b) => b[1] - a[1])[0];
+  if (!best || best[1] <= 0) return {rel: '朋友', close};
+  return {rel: best[0], score: best[1], close};
+}
+function relationLine(r) {
+  if (!r || !r.rel) return '';
+  const cn = REL_CN[r.rel] || '';
+  return `【关系】看着像${r.rel}——${cn}。这是从说话里看出来的，他改口就跟着改，别自己宣布。`;
+}
+
 async function assemble(query, opts = {}) {
   const persona = (await Store.getKV('persona', '')) || (await loadPersona());
   const onb = (await Store.getKV('onboarding', {})) || {};
@@ -182,6 +214,12 @@ async function assemble(query, opts = {}) {
   } catch (e) {}
 
   const seg = [STYLE_BLOCK, persona];
+  // 关系推断：每轮现算，不存死；算不出来就默认朋友
+  try {
+    const _t0 = (await Store.getKV('turns', [])) || [];
+    const _rl = relationLine(inferRelation(query, _t0));
+    if (_rl) seg.push(_rl);
+  } catch (e) {}
   if (typeof debt === 'string' && debt) seg.push(debt);
   if (typeof attitude !== 'undefined' && attitude && attitude.length) seg.push(attitude.join('\n'));
   const _histTurns = (await Store.getKV('turns', [])) || [];
