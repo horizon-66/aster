@@ -269,6 +269,16 @@ async function __sendOnce() {
     const u = window.__lastUsage || {};
     const tok = u.prompt || u.out ? ` · ${u.prompt + u.out} tok` : '';
     const cache = u.prompt ? ` · 缓存 ${u.hit}/${u.prompt}` : '';
+    // 长对话提醒：聊太长了主动说一句（成本看得见的原则）
+    try {
+      const turns = (await Store.getKV('turns', [])) || [];
+      const warned = localStorage.getItem('aster.longwarn') || '';
+      if (turns.length >= 40 && warned !== String(turns.length >> 4)) {
+        localStorage.setItem('aster.longwarn', String(turns.length >> 4));
+        add('这段聊得挺长了。开个新话题会更省，我记得的都还在', 'sys');
+      }
+    } catch (e) {}
+
     status(localStorage.getItem('aster.lang.m')==='en'
       ? `${await Store.count()} records · ${ms}ms${tok}${cache}`
       : `${await Store.count()} 条记忆 · ${ms}ms${tok}${cache}`);
@@ -501,6 +511,16 @@ $('#file').onchange = async (e) => {
     const pack = JSON.parse(await f.text());
     const n = await Store.importPack(pack, true);
     $('#packMsg').textContent = `导入 ${n} 条`;
+    // 长对话提醒：聊太长了主动说一句（成本看得见的原则）
+    try {
+      const turns = (await Store.getKV('turns', [])) || [];
+      const warned = localStorage.getItem('aster.longwarn') || '';
+      if (turns.length >= 40 && warned !== String(turns.length >> 4)) {
+        localStorage.setItem('aster.longwarn', String(turns.length >> 4));
+        add('这段聊得挺长了。开个新话题会更省，我记得的都还在', 'sys');
+      }
+    } catch (e) {}
+
     status(localStorage.getItem('aster.lang.m')==='en' ? `${await Store.count()} records` : `${await Store.count()} 条记忆`);
   const cnt = document.getElementById('count');
   if (cnt) cnt.textContent = localStorage.getItem('aster.lang.m')==='en'
@@ -1023,6 +1043,18 @@ document.getElementById('deskLink')?.addEventListener('click', () => {
     ans.forbidden_topic = ans.forbidden || '';
     ans.thinking_tendency = ans.thinking || '';
     await Store.setKV('onboarding', ans);
+    // 初识四问就是第一批事实：新用户第一天就有 4 条可查的事实
+    try {
+      const facts = [];
+      if (ans.call_name) facts.push(['他', '称呼', ans.call_name]);
+      if (ans.rhythm) facts.push(['他', '相处节奏', ans.rhythm === 'quiet' ? '喜欢安静' : '喜欢讨论']);
+      if (ans.thinking) facts.push(['他', '思考方式', ans.thinking === 'feel' ? '先讲感受' : '先讲逻辑']);
+      if (ans.forbidden && ans.forbidden !== '暂时没有') facts.push(['他', '不想提', ans.forbidden]);
+      const prev = (await Store.getKV('facts', {})) || {};
+      for (const [s0, a0, v0] of facts) prev[s0 + '|' + a0] = {value: v0, ts: Date.now(), conf: 0.9};
+      await Store.setKV('facts', prev);
+      window.__facts = prev;
+    } catch (e) {}
     // 写成一条记忆
     const bits = [];
     if (ans.call_name) bits.push('称呼：' + ans.call_name);

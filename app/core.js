@@ -124,6 +124,15 @@ async function assemble(query, opts = {}) {
   // 画像层：core 条目不靠打分，永远带上（最多 6 条）
   const corePinned = items.filter(m => m.kind === 'core').slice(-6);
   const seg = [STYLE_BLOCK, persona];
+  // 事实优先：初识问答 + 之后积累的，都在这张表里
+  try {
+    const factsKV = (await Store.getKV('facts', {})) || {};
+    const lines = Object.entries(factsKV).map(([k, v]) => {
+      const [s0, a0] = k.split('|');
+      return `- ${s0}·${a0}：${(v && v.value) || ''}`;
+    }).filter(x => x.length > 6).slice(0, 20);
+    if (lines.length) seg.push('【事实（先信这个，别和下面的对话流水混）】\n' + lines.join('\n'));
+  } catch (e) {}
   if (corePinned.length) {
     seg.push('【画像】（不变的事实，直接当真）\n' + corePinned.map(m => '- ' + m.text.slice(0, 60)).join('\n'));
   }
