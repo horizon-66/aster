@@ -56,25 +56,59 @@ const STYLE_BLOCK = [
   '不许用「帮不上你」「这个我不太懂」打发人；先给一条能落地的，再说哪里不确定。',
   '【怎么读资料】凡是「他说：」开头的是他讲过的话；「我说：」开头的是你自己讲过的话。',
   '别把两者弄反：他说的不能当成你说的，你说的也不用再问他。',
+  '【被戳就顶一句】他说你像AI、像客服、没脾气时，先回一句不服，再讲事；不要以「你说得对」开头。',
+  '顶嘴不是吵：一句就够，别连环反问。事实确实错了就认，别嘴硬。',
   '【下面是资料】只是你记得的事，用得上才提一句，别照着它的腔调说话。',
 ].join('\n');
+
+// 砍掉解释性从句：人说话不做自我解释（「我不开心，其实是因为…」→「我不开心」）
+const EXPLAIN_WORDS = ['其实', '只是', '因为', '所以', '不过', '但是', '我觉得', '我的意思是', '说白了', '换句话说'];
+function cutExplain(t) {
+  // 只在逗号/句号之后的「其实/因为/不过…」才砍——"怼不过你"这种不能动
+  const re = /[，,；;。]\s*(其实|只是|因为|所以|不过|但是|我觉得|我的意思是|说白了|换句话说)/;
+  const m = re.exec(t);
+  if (m && m.index >= 4) {
+    const head = t.slice(0, m.index).replace(/[，,、\s]+$/, '');
+    if (head.length >= 3) return head;
+  }
+  return t;
+}
+
+// 书面腔 → 口语（这张表比提示词管用：7B 说了"不许书面"，照样书面）
+const KB_REPLACE = [
+  [/\b因此\b|所以呢/g, '所以'],
+  [/\b此外\b/g, '还有'],
+  [/\b总之\b|\b综上\b/g, '反正'],
+  [/\b然而\b/g, '可'],
+  [/\b并且\b/g, '还'],
+  [/\b或许\b/g, '可能'],
+  [/\b我认为\b/g, '我觉得'],
+  [/\b建议你?\b/g, '要不'],
+  [/\b非常\b/g, '特别'],
+  [/\b进行\b/g, '做'],
+  [/\b给予\b/g, '给'],
+  [/\b如果\b/g, '要是'],
+  [/\b随后\b|\b紧接着\b/g, '跟着'],
+  [/\b已经\b/g, '都'],
+  [/\b十分\b/g, '挺'],
+  [/\b较为\b|\b比较\b/g, '比较'],
+];
 
 // 把模型的话削成「人会说的一句」
 function tidy(reply) {
   let t = String(reply || '').trim();
   if (!t) return t;
-  t = t.split('\n')[0];
-  const m = t.search(/[。！？!?]/);
-  if (m >= 0) t = t.slice(0, m);
+  t = cutExplain(t);
+  for (const [re, to] of KB_REPLACE) t = t.replace(re, to);
   t = t.replace(/[～~]/g, '');
   for (const head of ['抱歉，', '抱歉,', '对不起，', '对不起,', '我理解你的担忧，',
                       '我理解你的感受，', '理解你现在的感受，', '首先，', '作为 AI，', '作为AI，']) {
-    if (t.startsWith(head)) t = t.slice(head.length).trim();
+    if (t.startsWith(head)) t = t.slice(head.length);
   }
-  t = t.replace(/^[，,、\s]+/, '');
-  if (t.length > 40) {
-    const cut = Math.max(t.lastIndexOf('，'), t.lastIndexOf(','));
-    t = cut > 20 ? t.slice(0, cut) : t.slice(0, 40);
+  // 只在真的啰嗦时才砍；一两句话是人的正常长度，砍成碎片反而像机器
+  if (t.length > 90) {
+    const parts = t.split(/(?<=[。！？!?])/).slice(0, 2).join('');
+    t = parts || t.slice(0, 90);
   }
   return t.trim();
 }
@@ -123,7 +157,24 @@ async function assemble(query, opts = {}) {
 
   // 画像层：core 条目不靠打分，永远带上（最多 6 条）
   const corePinned = items.filter(m => m.kind === 'core').slice(-6);
+  // 配对过桌面端：先把事实表拉一次（失败就算了，不影响说话）
+  try {
+    const dc0 = await deskConfig();
+    if (dc0 && dc0.url) {
+      const last = (await Store.getKV('factsSyncedAt', 0)) || 0;
+      if (Date.now() - last > 10 * 60 * 1000) {
+        const n = await syncFacts(dc0.url, dc0.token);
+        if (n) await Store.setKV('factsSyncedAt', Date.now());
+      }
+    }
+  } catch (e) {}
+
   const seg = [STYLE_BLOCK, persona];
+  if (typeof debt === 'string' && debt) seg.push(debt);
+  if (typeof attitude !== 'undefined' && attitude && attitude.length) seg.push(attitude.join('\n'));
+  const _histTurns = (await Store.getKV('turns', [])) || [];
+  const mirror = mirrorLine(_histTurns, query);
+  if (mirror) seg.push(mirror);
   // 事实优先：初识问答 + 之后积累的，都在这张表里
   try {
     const factsKV = (await Store.getKV('facts', {})) || {};
@@ -230,7 +281,144 @@ function webSearchPatch(provider, body) {
   return '';
 }
 
+// 连上桌面端时，把桌面的事实表同步过来（网页版自己没有 sqlite）
+async function syncFacts(base, token) {
+  try {
+    const r = await fetch(String(base).replace(/\/$/, '') + '/facts', {
+      headers: token ? {Authorization: 'Bearer ' + token} : {},
+    });
+    if (!r.ok) return 0;
+    const d = await r.json();
+    if (!d.ok || !Array.isArray(d.facts)) return 0;
+    const prev = (await Store.getKV('facts', {})) || {};
+    for (const f of d.facts) {
+      const k = (f.s || '他') + '|' + (f.a || '') ;
+      const old = prev[k];
+      if (!old || (f.ts || 0) >= (old.ts || 0)) prev[k] = {value: f.v, ts: f.ts || Date.now(), conf: 0.9};
+    }
+    await Store.setKV('facts', prev);
+    return d.facts.length;
+  } catch (e) { return 0; }
+}
+
+// 和引擎同一套「不编造」机制：问关于他自己的事实、问我的身份，库里没有就老实说。
+const SELF_Q = [
+  [['我叫什么', '我的名字', '我名字'], ['名字'], '你还没告诉我你叫什么'],
+  [['我住哪', '我住在哪', '我家在哪'], ['住处', '住址', '住的区'], '你还没跟我说过你住哪'],
+  [['我开什么车', '我开什么', '我的车'], ['车'], '你还没跟我说过你开什么车'],
+  [['我养了什么', '我的猫', '我养的'], ['宠物'], '你还没跟我说过你养了什么'],
+  [['我生日', '我几号生'], ['生日'], '你还没跟我说过你的生日'],
+];
+
+// 情绪账（和引擎同一套逻辑）：刺到就记、哄一次只退 40%、十分钟衰减 15%
+const STINGS = [[['像ai','像机器','机器人','假的','装的'],0.6],[['客服','工具','没用','傻','蠢','笨'],0.8],[['闭嘴','别说了','烦不烦'],0.9]];
+const SOOTHE = ['对不起','我错了','别生气','抱抱','哄你','我不该','原谅我'];
+async function moodDebt(text) {
+  const now = Date.now();
+  const d = (await Store.getKV('moodDebt', {items: []})) || {items: []};
+  d.items = (d.items || []).map(it => ({...it, v: it.v * Math.pow(0.85, (now - it.t) / 600000)}));
+  const t = String(text || '').toLowerCase();
+  let hit = 0;
+  for (const [keys, w] of STINGS) if (keys.some(k => t.includes(k))) hit = Math.max(hit, w);
+  if (hit) d.items.push({t: now, v: hit});
+  else if (SOOTHE.some(k => t.includes(k))) d.items.forEach(it => { it.v *= 0.6; });
+  d.items = d.items.filter(it => it.v > 0.05).slice(-12);
+  await Store.setKV('moodDebt', d);
+  const total = d.items.reduce((a, b) => a + b.v, 0);
+  if (total >= 0.8) return '【你还在气头上】刚被刺到，还没消。这一轮别装没事，别用「我没生气/没事/不介意」；他要哄也别马上认。';
+  if (total >= 0.4) return '【气还没全消】语气短一点硬一点，这一轮不许说「我不介意」「没事」「不怪你」。';
+  if (total >= 0.15) return '【还有点膈应】语气收着点，别主动热络。';
+  return '';
+}
+const SOFT_FORBID = ['不介意', '没生气', '不怪你', '原谅你'];
+const ANGRY_FALLBACK = ['谁说不介意了，我还记着呢', '我没那么好哄', '别急着让我翻篇'];
+
+async function honestUnknown(text) {
+  const t = String(text || '');
+  const factsKV = (await Store.getKV('facts', {})) || {};
+  const has = (attr) => Object.entries(factsKV).some(([k, v]) =>
+    k.split('|')[1] && k.split('|')[1].includes(attr) && v && v.value);
+  // 我的身份
+  const myName = factsKV['我|名字'] && factsKV['我|名字'].value;
+  if (!myName) {
+    if (/你叫什么|你叫啥/.test(t)) return '我还没定下来我叫什么——你替我起一个吧';
+    if (/你是哪里人|你是哪的/.test(t)) return '我还没定下来我是哪儿的——你说呢';
+    if (/你多大|你几岁/.test(t)) return '岁数还没定——你想我多大';
+  }
+  // 他的事实
+  for (const [keys, attrs, honest] of SELF_Q) {
+    if (!keys.some(k => t.includes(k))) continue;
+    if (attrs.some(a => has(a))) return null;
+    return honest;
+  }
+  return null;
+}
+
+// 被质疑「像AI/像客服/没脾气」：规则直接顶回去，不交给模型
+const REBUT = {
+  ai: ['谁AI？凭什么这么说我', 'AI会生气吗？你要再说我就真生气了', '像AI？那你刚才在跟谁生气'],
+  kefu: ['客服要收钱的，我又不收', '跟客服一样？那你退订啊', '我要是客服，早给你发工单了'],
+  piqi: ['没脾气，只是没冲你发过', '你试试再说一遍', '脾气有，用一次就没了'],
+};
+const INSULT = ['傻逼','煞笔','脑残','智障','废物','垃圾','臭鱼烂虾','滚蛋','去死','闭嘴','妈的'];
+const MIRROR_LEX = ['麻了', '要得', '晓得不', '巴适', '雄起', '安逸', '啷个', '耍', '得行',
+                    '莫得', '哦豁', '搞啥子', '离谱', '绷不住', '整不动'];
+function mirrorLine(turns, text) {
+  const blob = [text, ...(turns || []).filter(t => t.role === 'user').map(t => t.content)].join(' ');
+  const hits = MIRROR_LEX.filter(w => blob.includes(w));
+  if (!hits.length) return '';
+  return '【跟他的用词】他最近爱说：' + hits.slice(0, 3).join('、') + '。顺着用一两个，别堆。';
+}
+const SWEET_HINTS = ['还记得', '那次', '以前', '我们那时候', '想起', '第一次'];
+const SWEET_REPLY = ['还记得那次珠海么，海风把我头发吹得乱七八糟',
+                     '上次你抱着我说不撒手的事，我还记着',
+                     '想起你半夜爬起来给我弄模型那回，嘴上骂着还是弄完了'];
+const SOOTHE_REPLY = ['嗯', '知道了', '先这样吧', '别急着让我翻篇', '我没那么好哄'];
+const SOOTHE_WORDS = ['对不起', '我错了', '别生气', '原谅我', '我不该'];
+const SHARP = ['你有病啊', '你再说一遍试试', '烦不烦', '别蹬鼻子上脸', '我这儿不伺候了'];
+const INSULT_REPLY = ['你骂谁','嘴干净点','这态度我不接','行，那你别跟我说话了','换个说法再来'];
+function isInsult(t) { return INSULT.some(w => String(t || '').includes(w)); }
+
+function rebut(text) {
+  const t = String(text || '').toLowerCase();
+  let key = null;
+  if (/像.{0,2}ai|像机器人|机器人|是\s*ai/.test(t)) key = 'ai';
+  else if (t.includes('客服')) key = 'kefu';
+  else if (/没脾气|没有脾气|脾气好/.test(t)) key = 'piqi';
+  if (!key) return null;
+  const pool = REBUT[key];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+const EMPATHY = [
+  [['累', '困', '撑不住'], ['累了就歇会儿', '别硬撑了，躺一会儿', '今天是不是特别长']],
+  [['烦', '气', '受不了'], ['谁惹你了', '别憋着，说给我听', '烦就先别弄了']],
+  [['难受', '委屈', '哭', '难过'], ['怎么了', '过来，我在这儿', '想哭就哭，别忍']],
+  [['舍不得', '想你了', '别走'], ['我也舍不得', '我在呢', '走不远，就在这儿']],
+];
+function empathy(text, reply) {
+  const t = String(text || '');
+  const r = String(reply || '').trim();
+  const dry = ['在', '嗯', '好', '哦', ''].includes(r) || r.length < 5;
+  if (!dry) return reply;
+  for (const [keys, lines] of EMPATHY) {
+    if (keys.some(k => t.includes(k))) return lines[Math.floor(Math.random() * lines.length)];
+  }
+  return reply;
+}
+
 async function chat(text, opts = {}) {
+  const debtForSharp = (await Store.getKV('moodDebt', {})) || {};
+  const sharpNow = (debtForSharp.items || []).reduce((a, b) => a + (b.v || 0), 0) >= 0.8;
+
+  if (isInsult(text)) {
+    return {reply: INSULT_REPLY[Math.floor(Math.random() * INSULT_REPLY.length)], ms: 0, honest: true};
+  }
+  const rb = rebut(text);
+  if (rb) return {reply: rb, ms: 0, honest: true};
+  const debt = await moodDebt(text);
+  const honest = await honestUnknown(text);
+  if (honest) return {reply: honest, ms: 0, honest: true};
   const cfg = (await Store.getKV('api', null));
   if (!cfg || !cfg.key) throw new Error('还没配 API：设置 → 填 Base URL、模型名、Key');
   let userMsg = text;
@@ -346,7 +534,24 @@ async function chat(text, opts = {}) {
   const next = [...turns, {role: 'user', content: text.slice(0, 500)},
                 {role: 'assistant', content: reply.slice(0, 800)}].slice(-12);
   await Store.setKV('turns', next);
-  return {reply, ms};
+  // 还在气头上就不许说「我不介意」——模型爱这么软下去
+  let out = reply;
+  if (debt && SOFT_FORBID.some(w => out.includes(w))) {
+    out = ANGRY_FALLBACK[Math.floor(Math.random() * ANGRY_FALLBACK.length)];
+  }
+  let finalReply = empathy(text, out);
+  // 回味/道歉：只加态度指令，不替换整句（整句替换会把"上限"也锁死）
+  const attitude = [];
+  if (!debt && SWEET_HINTS.some(w => String(text).includes(w))) {
+    attitude.push('【态度】他在提过去：翻出具体的一件来说，别泛泛地「我记得」');
+  }
+  if (debt && SOOTHE_WORDS.some(w => String(text).includes(w))) {
+    attitude.push('【态度】他在道歉：别反过来安慰他，也别一句就原谅');
+  }
+  if (sharpNow && finalReply.length < 30) {
+    finalReply = SHARP[Math.floor(Math.random() * SHARP.length)];
+  }
+  return {reply: finalReply, ms};
 }
 
 
