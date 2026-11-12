@@ -78,7 +78,6 @@ setTimeout(() => { try { if (typeof compactMemory === 'function') compactMemory(
 
 /* 侧栏「发给它看」：本地文件 / 照相机 两个选择 */
 (function () {
-  const entry = document.getElementById('sendToIt');   // 旧入口，现在没有也能跑
   const docInp = document.getElementById('docFile');
   const shotInp = document.getElementById('shotFile');
   if (!docInp || !shotInp) return;
@@ -96,7 +95,8 @@ setTimeout(() => { try { if (typeof compactMemory === 'function') compactMemory(
     </div>`;
   document.body.appendChild(sheet);
 
-  if (entry) entry.onclick = () => {
+  /* 旧入口已移除，保留下面逻辑 */
+  if (false) {
     document.getElementById('drawer')?.classList.add('hide');
     sheet.style.display = 'flex';
   };
@@ -1559,7 +1559,7 @@ $('#autoFindDesk') && ($('#autoFindDesk').onclick = async () => {
   const hero = document.getElementById('hero');
   if (!hero) return;
   const log = document.getElementById('log');
-  const av = document.getElementById('heroAvatar');
+  const av = document.getElementById('heroAvatar') || {src: ''};
 
   const paintHi = () => {
     const h = new Date().getHours();
