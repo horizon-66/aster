@@ -54,6 +54,8 @@ const STYLE_BLOCK = [
   '他说「我腰疼」你答「怎么又疼了，躺一会儿，我给你揉」。',
   '【本事】你懂常识、会想、会给具体做法。问什么都接得住：给一条能落地的，再说不确定的部分。',
   '不许用「帮不上你」「这个我不太懂」打发人；先给一条能落地的，再说哪里不确定。',
+  '【怎么读资料】凡是「他说：」开头的是他讲过的话；「我说：」开头的是你自己讲过的话。',
+  '别把两者弄反：他说的不能当成你说的，你说的也不用再问他。',
   '【下面是资料】只是你记得的事，用得上才提一句，别照着它的腔调说话。',
 ].join('\n');
 
@@ -118,7 +120,15 @@ async function assemble(query, opts = {}) {
   if (onb.forbidden) seg.push(`不要主动提「${onb.forbidden}」。`);
   const lastBrief = briefs[briefs.length - 1];
   if (lastBrief) seg.push('【最近的摘要】' + lastBrief.text.slice(0, 400));
-  if (scored.length) seg.push('【相关记忆】\n' + scored.map(m => '- ' + m.text.slice(0, 120)).join('\n'));
+  if (scored.length) {
+    const labeled = scored.map(m => {
+      const t = (m.text || '').slice(0, 120);
+      if (t.startsWith('他说：')) return '- （他讲过）' + t.slice(3);
+      if (t.startsWith('我说：')) return '- （我讲过）' + t.slice(3);
+      return '- ' + t;
+    });
+    seg.push('【相关记忆】\n' + labeled.join('\n'));
+  }
   return {system: seg.join('\n'), used: scored};
 }
 
@@ -256,6 +266,21 @@ async function chat(text, opts = {}) {
       throw new Error(explainError(new Error(`HTTP ${r2.status}：${t.slice(0, 120)}`), cfg));
     }
     const d = await r2.json();
+    try {
+      const u = d.usage || {};
+      const prompt = Number(u.prompt_tokens || 0);
+      const out = Number(u.completion_tokens || 0);
+      const hit = Number(u.prompt_cache_hit_tokens || u.cached_tokens || u.prompt_tokens_details?.cached_tokens || 0);
+      if (prompt || out || hit) {
+        const prev = (await Store.getKV('usage', {})) || {};
+        const day = new Date().toISOString().slice(0, 10);
+        const cur = (prev[day] || {prompt: 0, out: 0, hit: 0, turns: 0});
+        cur.prompt += prompt; cur.out += out; cur.hit += hit; cur.turns += 1;
+        prev[day] = cur;
+        await Store.setKV('usage', prev);
+        window.__lastUsage = {prompt, out, hit};
+      }
+    } catch (e) {}
     const msg = d.choices?.[0]?.message || {};
     const calls = msg.tool_calls || [];
     if (calls.length) {

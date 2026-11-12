@@ -265,7 +265,13 @@ async function __sendOnce() {
       await Store.queueAdd({kind: 'reply', payload: {text: reply}}).catch(() => {});
       deliverQueue().then(() => window.__paintLink && window.__paintLink()).catch(() => {});
     }
-    status(localStorage.getItem('aster.lang.m')==='en' ? `${await Store.count()} records · ${ms}ms` : `${await Store.count()} 条记忆 · ${ms}ms`);
+    // 状态栏：条数 · 耗时 · 这一轮的 token / 缓存命中
+    const u = window.__lastUsage || {};
+    const tok = u.prompt || u.out ? ` · ${u.prompt + u.out} tok` : '';
+    const cache = u.prompt ? ` · 缓存 ${u.hit}/${u.prompt}` : '';
+    status(localStorage.getItem('aster.lang.m')==='en'
+      ? `${await Store.count()} records · ${ms}ms${tok}${cache}`
+      : `${await Store.count()} 条记忆 · ${ms}ms${tok}${cache}`);
   } catch (e) {
     if (wait.parentNode) wait.remove();
     bubble.remove();
@@ -397,6 +403,19 @@ function applyProvider(pid) {
 pick?.addEventListener('change', () => applyProvider(pick.value));
 // 一进设置就按当前选中的服务商填好，不用先切一下才生效
 try {
+  (async () => {
+    try {
+      const u = (await Store.getKV('usage', {})) || {};
+      const day = new Date().toISOString().slice(0, 10);
+      const t = u[day];
+      const el = document.getElementById('usageLine');
+      if (!el) return;
+      el.textContent = t
+        ? `今天 ${t.turns} 轮 · 输入 ${t.prompt} · 输出 ${t.out} · 缓存命中 ${t.hit}`
+        : '今天还没说话';
+    } catch (e) {}
+  })();
+
   const saved = localStorage.getItem('aster.provider');
   if (saved && PROVIDERS[saved]) pick.value = saved;
   const baseEl = $('#base');
