@@ -95,13 +95,26 @@ function tidyTask(reply) {
   return out.length > 160 ? out.slice(0, 160) : out;
 }
 
+// 该不该翻记忆（和引擎同一套规则）
+const PAST = ['记得', '说过', '上次', '之前', '以前', '那次', '昨天', '前天', '聊过', '提过'];
+const FACT = ['多少', '多大', '几个', '哪里', '哪儿', '叫什么', '是什么', '哪家', '什么时候', '住哪', '在哪', '啥'];
+const CHAT = ['在吗', '宝宝', '想你', '累了', '困', '晚安', '早安', '抱', '亲', '哈哈', '咋啦', '在干啥', '爱你'];
+function needRecall(q) {
+  const t = String(q || '').trim();
+  if (t.length < 3) return false;
+  if (PAST.some(w => t.includes(w))) return true;
+  if (FACT.some(w => t.includes(w)) && t.length >= 6 &&
+      (t.endsWith('？') || t.endsWith('?') || t.includes('的') || t.includes('我') || t.includes('你'))) return true;
+  return false;
+}
+
 async function assemble(query, opts = {}) {
   const persona = (await Store.getKV('persona', '')) || (await loadPersona());
   const onb = (await Store.getKV('onboarding', {})) || {};
   const briefs = (await Store.getKV('briefs', [])) || [];
   const items = await Store.all(400);
 
-  const scored = items
+  const scored = (needRecall(query) ? items : [])
     .map(m => ({m, s: score(m, query)}))
     .filter(x => x.s > 0.28)
     .sort((a, b) => b.s - a.s)
