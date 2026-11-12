@@ -254,13 +254,20 @@ async function __sendOnce() {
   const bubble = add('', 'her', {allowEmpty: true});
   const wait = add('…', 'sys');
   try {
-    const {reply, ms} = await chat(t, {
+    let {reply, ms} = await chat(t, {
       onDelta: (d, full) => {
         if (wait.parentNode) wait.remove();
         bubble.textContent = full;
         log.scrollTop = log.scrollHeight;
       },
     });
+    // 空气泡兜底：绝不能让他说完一句、屏幕上一个字都没有
+    if (!reply || !String(reply).trim()) {
+      const insult = ['傻逼','煞笔','脑残','智障','废物','垃圾','滚蛋','去死','妈的']
+        .some(w => t.includes(w));
+      reply = insult ? '你骂谁' : '……我刚才走神了，你再说一遍';
+      bubble.textContent = reply;
+    }
     if (_tk) {
       await Store.queueAdd({kind: 'reply', payload: {text: reply}}).catch(() => {});
       deliverQueue().then(() => window.__paintLink && window.__paintLink()).catch(() => {});

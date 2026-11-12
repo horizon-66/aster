@@ -1,0 +1,15 @@
+<!doctype html><meta charset=utf-8><body><pre id=o>…</pre>
+<script src="store.js"></script><script src="core.js"></script>
+<script>
+(async () => {
+  const out = [];
+  try {
+    await Store.setKV('api', {base: 'http://127.0.0.1:8899/v1', model: 'mock', key: 'k'});
+    for (const q of ['你叫什么名字','你是哪里人','我住哪','我开什么车','在吗']) {
+      const r = await chat(q);
+      out.push(q + ' → ' + r.reply);
+    }
+  } catch (e) { out.push('ERR ' + (e && e.message)); }
+  document.getElementById('o').textContent = out.join(' | ');
+})();
+</script>
