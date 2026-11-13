@@ -76,6 +76,7 @@
   #letter{position:fixed;inset:0;z-index:45;background:#0c0c0e;display:flex;align-items:center;
     justify-content:center;padding:24px 18px calc(env(safe-area-inset-bottom) + 24px);overflow:auto}
   #letter.hide{display:none}
+  #letter .letterHelix{width:150px;height:48px;margin:0 auto 14px;display:block}
   #letter .card{max-width:520px;width:100%;background:rgba(255,255,255,.045);
     border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:26px 22px}
   #letter h1{margin:0 0 18px;font-size:15px;color:var(--pink);font-weight:600;letter-spacing:.02em}
@@ -373,3 +374,10 @@
     place-items:center;padding:0}
   #kbBtn.on{display:grid}
   body.voiceMode #text{display:none}
+
+
+/* 2026-11-12 夜：开场页右上角：音乐 + 语言 */
+.topTools{position:fixed;right:14px;top:14px;z-index:60;display:flex;gap:8px}
+.topTools button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+  color:#c9c9cf;border-radius:999px;height:28px;padding:0 12px;font-size:12px;line-height:1}
+.topTools button.off{opacity:.45}

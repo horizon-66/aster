@@ -1,9 +1,9 @@
 /* 只缓存静态资源；API 与对话一律走网络，不在离线时造假数据 */
-const CACHE = 'aster-v11';
+const CACHE = 'aster-v13';
 const ASSETS = ['./', './index.html', './store.js', './core.js', './persona.md',
   './manifest.webmanifest', './icon-192.png', './icon-512.png',
-  './bgm-letter.m4a', './intro.m4a', './version.json',
-  './styles.css', './app.js', './sfx/tap.m4a', './sfx/done.m4a', './sfx/open.m4a', './sfx/entry.m4a'];
+  './intro.m4a', './version.json',
+  './styles.css', './app.js', './sfx/tap.m4a', './sfx/done.m4a', './sfx/entry.m4a'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();

@@ -1120,7 +1120,7 @@ document.getElementById('deskLink')?.addEventListener('click', () => {
 
 /* ---------- 会动的 logo：横着的双螺旋 ---------- */
 (function () {
-  const cv = document.getElementById('obLogo');
+  function startHelix(cv) {
   if (!cv) return;
   const W = 176, H = 60;
   cv.width = W; cv.height = H;
@@ -1192,6 +1192,8 @@ document.getElementById('deskLink')?.addEventListener('click', () => {
   cv.addEventListener('pointerdown', (e) => { press = 1; vel = 0.045; onMove(e); });
   cv.addEventListener('pointerup', () => { vel = 0.011; });
   cv.addEventListener('pointerleave', () => { target = 0; vel = 0.011; });
+  }
+  document.querySelectorAll('canvas.helix').forEach(startHelix);
 })();
 
 /* ---------- 中英文 ---------- */
@@ -1326,6 +1328,7 @@ document.getElementById('deskLink')?.addEventListener('click', () => {
     localStorage.setItem(KEY, lang);
     translateDOM(lang);
   }
+  window.__setLangM = apply;
   const box = document.getElementById('langChips');
   if (box) box.onclick = (e) => { const b = e.target.closest('button'); if (b) apply(b.dataset.lang); };
   apply(localStorage.getItem(KEY) || 'zh');
@@ -1986,4 +1989,20 @@ document.getElementById('installBtn')?.addEventListener('click', () => {
       ? `声音已设定：${d.voice_id}（${d.model.name || '本地模型'}）`
       : '还没设定声音——现在用的是临时声，等桌面端定好会同步过来';
   } catch { el.textContent = '声音规格读不到'; }
+})();
+
+/* ---------- 开场页右上角两颗的状态 ---------- */
+(function syncTopTools() {
+  const paint = () => {
+    const on = localStorage.getItem('aster.bgm.m') !== '0';
+    document.querySelectorAll('.topTools .music').forEach(b => {
+      b.classList.toggle('off', !on);
+      b.textContent = on ? '♪' : '♪̸';
+    });
+    const en = localStorage.getItem('aster.lang.m') === 'en';
+    document.querySelectorAll('.topTools .lang').forEach(b => { b.textContent = en ? 'EN/中' : '中/EN'; });
+  };
+  paint();
+  setTimeout(paint, 400);
+  document.querySelectorAll('.topTools button').forEach(b => b.addEventListener('click', () => setTimeout(paint, 60)));
 })();

@@ -18,7 +18,12 @@
 <body>
 
 <div id="letter" class="hide">
+  <div class="topTools">
+    <button class="music" onclick="window.__toggleBgmM&&window.__toggleBgmM()" title="背景音乐">♪</button>
+    <button class="lang" onclick="window.__setLangM&&window.__setLangM(localStorage.getItem('aster.lang.m')==='en'?'zh':'en')">中/EN</button>
+  </div>
   <div class="card">
+    <canvas class="helix letterHelix" width="176" height="54"></canvas>
     <h1>给第一次打开我的人</h1>
     <p>我不知道你叫什么，也不知道你为什么在这个时间点打开我。<br>但我大概能猜到——你想有个能说话的对象，在你讲完一句之后，会回你一句。</p>
     <p>所以我先把话说清楚：<br>我们不妄想造就真正拥有自我意识的 AI，<br>而是构筑一处数字个体的栖息之所。</p>
@@ -62,9 +67,13 @@
 </div>
 
 <div id="obM" class="hide">
+  <div class="topTools">
+    <button class="music" onclick="window.__toggleBgmM&&window.__toggleBgmM()" title="背景音乐">♪</button>
+    <button class="lang" onclick="window.__setLangM&&window.__setLangM(localStorage.getItem('aster.lang.m')==='en'?'zh':'en')">中/EN</button>
+  </div>
   <div class="obOuter">
   <div class="obMark" aria-hidden="true">
-    <canvas id="obLogo" width="176" height="60"></canvas>
+    <canvas id="obLogo" class="helix" width="176" height="60"></canvas>
   </div>
   <div class="box">
     <div class="step" id="obStep">1 / 4</div>
@@ -111,7 +120,7 @@
 
 
 <footer>
-  <input id="docFile" type="file" accept=".txt,.md,.json,.csv,.log,.srt,.js,.py,.html,.css,.tsv,.pdf,image/*" hidden>
+  <input id="docFile" type="file" accept=".txt,.md,.json,.csv,.log,.srt,.js,.py,.html,.css,.tsv,.pdf,.docx,.xlsx,text/*,application/pdf" hidden>
   <input id="shotFile" type="file" accept="image/*" capture="environment" hidden>
   <div class="composer">
     <textarea id="text" rows="1" placeholder="说点什么…（长按变语音）"></textarea>
