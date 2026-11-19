@@ -419,6 +419,33 @@
     #top .heroInner > *, header .logo svg{animation:none!important}
   }
 </style>
+
+<style id="v4Look">
+/* 保留品牌元素（星标 logo、双螺旋、绯红、宣言），把手艺做上去 */
+:root{--v4-ink:#08080a;--v4-paper:#f2efe9;--v4-dim:#8b8b93;--v4-line:rgba(242,239,233,.10);--v4-clay:#d2503c}
+body{background:var(--v4-ink)!important;color:var(--v4-paper)!important}
+header{border-bottom:1px solid var(--v4-line)!important;background:rgba(8,8,10,.72)!important;backdrop-filter:blur(14px)}
+.heroInner{display:grid!important;grid-template-columns:minmax(0,1.12fr) minmax(400px,520px)!important;
+  gap:56px!important;align-items:center!important;max-width:1240px;margin:0 auto;padding:96px 40px 40px!important}
+h1{font-size:clamp(36px,4.6vw,56px)!important;line-height:1.16!important;letter-spacing:-.02em!important;margin:0 0 22px!important}
+h1 em{font-style:normal!important;color:var(--v4-clay)!important}
+.lede{font-size:16.5px!important;line-height:1.85!important;color:#a9a9b2!important;max-width:560px}
+.cta{display:flex;gap:12px;margin-top:32px!important}
+.btn{height:38px!important;padding:0 18px!important;border-radius:7px!important;font-size:13.5px!important;
+  display:inline-flex;align-items:center;justify-content:center}
+.btn:not(.ghost){background:var(--v4-paper)!important;color:#0b0b0d!important;font-weight:600}
+.btn.ghost{border:1px solid var(--v4-line)!important;color:var(--v4-paper)!important;background:none!important}
+.note{color:#6f6f78!important;font-size:12.5px!important;margin-top:14px!important}
+section{padding:96px 0!important;border-top:1px solid var(--v4-line)!important}
+.wrap{max-width:1120px!important;padding:0 40px!important}
+h2{font-family:"SF Mono",Menlo,monospace!important;font-size:11px!important;letter-spacing:.22em!important;
+  color:var(--v4-dim)!important;font-weight:400!important;margin:0 0 26px!important}
+h3{font-size:clamp(26px,3.4vw,40px)!important;line-height:1.35!important;letter-spacing:-.01em!important;margin:0 0 30px!important}
+.manifesto p{font-size:16.5px!important;line-height:2!important;color:#c9c7c0!important;max-width:720px}
+.manifesto p.key{color:var(--v4-paper)!important;font-size:18px!important}
+.v4shot{max-width:1180px;margin:56px auto 96px;padding:0 40px}
+.v4shot img{width:100%;display:block;border:1px solid var(--v4-line);border-radius:14px;box-shadow:0 40px 120px rgba(0,0,0,.6)}
+</style>
 </head>
 <body>
 <header>
@@ -459,6 +486,8 @@
     <canvas id="heroHelix" width="520" height="520" aria-hidden="true"></canvas>
   </div>
   </div>
+
+  <div class="v4shot"><img src="app.png" alt="Aster 界面"></div>
 
   <section id="idea">
     <div class="wrap">
