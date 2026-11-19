@@ -93,6 +93,8 @@
     btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 3v9M8 8l4 4 4-4"/><path d="M4 15v3a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-3"/></svg><span>同步</span>';
     btn.onclick = async () => {
       if (!base()) {
+        // 没有地址：先扫电脑上的二维码
+        if (window.AsterScan) { window.AsterScan(); return; }
         const v = prompt('电脑的地址（和手机同一个 Wi-Fi）\n例：http://192.168.1.3:8777');
         if (!v) return;
         localStorage.setItem(K_BASE, v.trim());
@@ -102,6 +104,11 @@
       btn.querySelector('span').textContent = '同步';
       if (r.ok) alert(r.sent ? ('同步好了，' + r.sent + ' 条') : '今天没什么要同步的');
       else alert('没同步成：' + r.reason + '\n\n点一下可以重新填地址');
+    };
+    btn.oncontextmenu = (e) => {
+      e.preventDefault();
+      localStorage.removeItem(K_BASE);
+      alert('地址清掉了。下次点会重新扫');
     };
     drawer.appendChild(btn);
   });
