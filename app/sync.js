@@ -3,6 +3,14 @@
   const K_BASE = 'aster.sync.base';
   const K_LAST = 'aster.sync.last';
   const base = () => (localStorage.getItem(K_BASE) || '').replace(/\/$/, '');
+  try {
+    const q = new URLSearchParams(location.search);
+    const fromQr = q.get('sync');
+    if (fromQr) {
+      localStorage.setItem(K_BASE, String(fromQr).replace(/\/$/, ''));
+      history.replaceState({}, '', location.pathname);
+    }
+  } catch (e) {}
 
   async function probe() {
     const b = base();
@@ -38,6 +46,15 @@
     try {
       const t = (document.getElementById('mood') || {}).textContent || '';
       if (t && t !== '—') out.push({kind: 'mood', mood: t, ts: Date.now()});
+    } catch (e) {}
+    try {
+      const turns = (await Store.getKV('turns', [])) || [];
+      turns.filter(t2 => today(t2.ts || t2.at || Date.now())).slice(-40).forEach(t2 => {
+        const u = t2.user || t2.prompt || '';
+        const a = t2.assistant || t2.reply || '';
+        if (u || a) out.push({kind: 'chat', text: ('我：' + u + ' / 她：' + a).slice(0, 200),
+                              ts: t2.ts || Date.now()});
+      });
     } catch (e) {}
     return out;
   }
