@@ -39,54 +39,63 @@
 <script src="config.js"></script>
 <main class="wrap">
 <h1>说明</h1>
-<p class="sub">装、配、带上记忆，以及出问题时先看哪。</p>
+<p class="sub">安装、配对、迁移，以及出问题时先看哪一步。</p>
 
 <h2>安装</h2>
 <h3>macOS</h3>
 <ol>
-  <li>下载 <code>.pkg</code>，双击安装</li>
-  <li>第一次打开如果被 Gatekeeper 拦下：右键 → 打开</li>
-  <li>打开后会自己起引擎，界面右下角显示「本地」就绪</li>
+  <li>下载 <code>.dmg</code>，双击挂载，把 Aster 拖进「应用程序」</li>
+  <li>第一次打开若被系统拦下：右键 → 打开，确认一次即可</li>
+  <li>启动后引擎自动运行；界面右上角显示「本地」即已就绪</li>
 </ol>
-<div class="box">安装包约 630 MB，里面带着 Python 运行时；不需要你另装环境。</div>
+<div class="box">安装包约 530 MB，内含 Python 运行环境，无需另装任何依赖。</div>
+
+<h3>Windows</h3>
+<ol>
+  <li>下载 <code>.exe</code>，按提示安装</li>
+  <li>首次运行如遇安全提示，选择「仍要运行」</li>
+  <li>模型与记忆同样保存在本机</li>
+</ol>
 
 <h3>手机</h3>
 <ol>
-  <li>手机浏览器打开 <code>/app/</code></li>
-  <li>Safari 分享 → 添加到主屏幕；Chrome → 安装应用</li>
-  <li>设置里填 Base URL、模型名、API Key（手机上不跑模型）</li>
+  <li>在电脑上打开「设置 → 手机连接」，取得二维码或令牌</li>
+  <li>手机与电脑处于同一网络时扫码即可配对；不便安装时，直接用浏览器打开该地址</li>
+  <li>人在外面时，先在电脑上开启隧道，或用私有网络把两端接入同一网段，再用同一令牌连接</li>
 </ol>
 
 <h2>模型</h2>
-<p>桌面版默认连本机的 Ollama。设置里「本地大脑」可以一键拉取；7B 约 5 GB 内存，14B 约 9 GB。</p>
-<div class="box">手机版不跑模型，调用你在设置里填的 OpenAI 兼容接口。</div>
+<p>对话默认由本机模型完成。设置里可选本机已安装的模型；7B 约需 5 GB 内存，14B 约需 9 GB。</p>
+<div class="box">可以另外接入多家云端模型，按角色分工：议事时分别提出方案与审阅，编码时分担编写与复核。每家各自填写密钥，密钥保存在系统钥匙串。</div>
 
 <h2>记忆</h2>
-<p>记忆分三样：条目库（mem.db）、摘要快照（briefs.json）、当下状态（bus.json）。都在本机，随时可导出。</p>
-<h3>导出与导入</h3>
+<p>记忆由几部分组成：条目库（mem.db）、事实表（名字、住处、家人与偏好）、画像、以及当下的情绪状态。全部保存在本机。</p>
+<p>旧记忆会随时间变淡：先模糊，再算忘掉；被重新提起会加固。身份、关系与忌讳的衰减很慢。</p>
+<h3>导出与迁移</h3>
 <ul>
   <li>桌面：设置 → 记忆包 → 导出 / 导入（zip）</li>
-  <li>手机：设置 → 记忆包 → 导出 / 导入（json）</li>
-  <li>手机 → 桌面：同一 WiFi，填电脑地址，点同步；记录和账目会进桌面工作台</li>
+  <li>对话记录：对话页右上「导出」，写成文本文件放在 <code>memory/exports/</code></li>
+  <li>手机记下的内容：恢复连接后自动上传，能识别时间的会整理成日程</li>
 </ul>
 
 <h2>数据与隐私</h2>
 <ul>
   <li>对话默认走本机模型，不上传</li>
-  <li>用云端时，请求直连你选的服务商，用你自己的 key；没有中转服务器</li>
+  <li>使用云端时，请求直连你选择的服务商，使用你自己的密钥；我们不设中转服务器</li>
+  <li>费用按各家实际用量计，本地模型不计费</li>
   <li>一条记忆约 100–200 字节，十万条约 20 MB</li>
-  <li>删掉应用不会删掉记忆；记忆在「应用支持」目录里，需要手动导出或删除</li>
+  <li>卸载应用不会删除记忆；记忆位于「应用支持」目录，需要时请自行导出或删除</li>
 </ul>
 
 <h2>出问题先看这几步</h2>
 <ol>
-  <li>设置 → 自检：它会检查引擎、人格、记忆条数、情绪，并给出人话结论</li>
-  <li>「引擎没开」：退出应用再开；仍不行看 <code>~/Library/Application Support/Aster/memory/</code> 是否可写</li>
-  <li>答非所问：先看设置里当前模型是不是你要的那个</li>
+  <li>设置 → 关于 → 运行自检：逐项检查引擎、密钥、模型、记忆库、身份、人格、关系与声音服务</li>
+  <li>若对话提示「引擎没应声」：退出应用后重新打开；仍不行，检查 <code>~/Library/Application Support/Aster/memory/</code> 是否可写</li>
+  <li>答非所问：先确认设置里当前使用的模型是否符合预期</li>
 </ol>
 
 <h2>版本</h2>
-<p>当前 <code id="ver">4.0.0</code>。历史版本在 <a href="https://github.com/horizon-66/aster/releases">Releases</a>。</p>
+<p>当前 <code id="ver">4.0.4</code>。历史版本见 <a href="https://github.com/horizon-66/aster/releases">Releases</a>。</p>
 </main>
 
 <footer><div class="wrap">陪着你，慢慢生长 · <a href="mailto:hello@asteragent.com">hello@asteragent.com</a></div></footer>
