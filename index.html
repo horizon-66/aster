@@ -187,10 +187,10 @@
   /* —— 版式二改 2026-11-11 下午 —— */
   /* 首屏做满一屏 */
   #top{ display:block; }
-  #top > .heroInner{ min-height:calc(100vh - 68px); }
+  #top > .heroInner{ min-height:calc(76vh - 68px); }
   #top > .heroInner{
     display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center;
-    max-width:1120px;margin:0 auto;padding:90px 28px 70px;width:100%}
+    max-width:1120px;margin:0 auto;padding:76px 28px 24px;width:100%}
   #top h1{font-size:clamp(44px,6vw,84px);line-height:1.06;letter-spacing:-.03em}
   #top .lede{max-width:52ch;margin-top:26px;font-size:17px;line-height:1.9;color:var(--ink-2)}
   #top .cta{margin-top:38px;display:flex;gap:12px}
@@ -307,7 +307,7 @@
   #top .artStar{display:none}
   #top .art canvas{display:block;position:relative;z-index:1}
   /* 深色章节 */
-  #idea{
+  #idea{padding-top:0;
     background:
       radial-gradient(900px 520px at 82% 12%, rgba(232,23,61,.22), transparent 62%),
       radial-gradient(700px 420px at 12% 88%, rgba(90,40,60,.35), transparent 60%),
@@ -487,7 +487,6 @@ h3{font-size:clamp(26px,3.4vw,40px)!important;line-height:1.35!important;letter-
   </div>
   </div>
 
-  <div class="v4shot"><img src="app.png" alt="Aster 界面"></div>
 
   <section id="idea">
     <div class="wrap">
