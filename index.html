@@ -78,7 +78,17 @@ body.hot #ring{width:64px;height:64px;border-color:rgba(255,59,59,.9);background
   transition:right .35s cubic-bezier(.22,.7,.3,1)}
 .top nav a:hover{color:var(--fg)}
 .top nav a:hover::after{right:0}
-@media(max-width:900px){.top nav{display:none}}
+/* 手机上也要有导航和中英切换：原来整条 nav 直接 display:none，手机上什么都没有 */
+@media(max-width:900px){
+  .top{height:58px}
+  .top .wrap{gap:10px}
+  .top nav{display:flex;gap:15px;overflow-x:auto;max-width:calc(100vw - 132px);
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+  .top nav::-webkit-scrollbar{display:none}
+  .top nav a{font-size:12px;white-space:nowrap}
+  .langsw{margin-left:8px;flex:0 0 auto}
+  .logo{flex:0 0 auto}
+}
 
 /* ══════════ 首屏 ══════════ */
 .hero{padding:clamp(120px,16vh,190px) 0 clamp(60px,10vh,110px);min-height:100vh;display:flex;align-items:center}
