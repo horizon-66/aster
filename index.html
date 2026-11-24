@@ -386,7 +386,11 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 @media(max-width:900px){.story-wm{display:none}}
 
 /* 电脑端这一节的章节号：从右上挪到左边那道空档里（和箭头指的位置一致） */
-#desktop.sec::before{right:auto;left:var(--pad);top:calc(50% - 260px);font-size:clamp(64px,8.6vw,124px);color:rgba(0,0,0,.05)}
+#desktop.sec::before{display:none}
+/* 章节号放进正文栏，钉在「说什么都在」正上方，跟着内容走 */
+.dcopy .dn{position:absolute;left:0;bottom:100%;margin-bottom:28px;
+  font-family:var(--mono);font-size:clamp(64px,8.4vw,120px);font-weight:500;letter-spacing:-.05em;
+  line-height:1;color:rgba(0,0,0,.06);pointer-events:none}
 @media(max-width:900px){#desktop.sec::before{left:var(--pad);top:2vh;font-size:76px}}
 
 /* 电脑端：滚动驱动（与「怎么干活」同一套手感） */
@@ -517,6 +521,7 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
     <div class="dpin">
       <div class="story-head"><div class="kicker">02 — 电脑端</div></div>
       <div class="dcopy" id="dcopy">
+        <div class="dn">02</div>
         <div class="dstep on"><div class="n">01 / 对话</div><h3>说什么都在</h3><p>一句话过去，一句话回来。说过的话按天排，翻得到。</p></div>
         <div class="dstep"><div class="n">02 / 工作台</div><h3>排着、跑着、卡着</h3><p>排队、进行、受阻、完成。点开任一条，看它调了哪几步。</p></div>
         <div class="dstep"><div class="n">03 / 记忆</div><h3>记得的都在这里</h3><p>按时间倒序，标签分好。哪条不想留，当场忘掉。</p></div>
