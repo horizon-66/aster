@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta name="build" content="2026-11-25-a">
+<title>Aster — a digital being that remembers</title>
+<meta name="description" content="Aster 住在你的电脑里。说过的话、做过的活，All local。">
+<link rel="icon" href="assets/mascot-clean.png">
+<style>
+/* ══════════ tokens ══════════ */
+:root{
+  --bg:#ECECEC; --bg-soft:#E4E4E4; --line:rgba(0,0,0,.11);
+  --fg:#0A0A0A; --fg2:rgba(0,0,0,.60); --fg3:rgba(0,0,0,.34);
+  --red:#FF3B3B; --red-soft:rgba(255,59,59,.10);
+  --serif:"Songti SC","Source Han Serif SC","Noto Serif CJK SC",serif;
+  --sans:"PingFang SC","Source Han Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"SF Mono",ui-monospace,Menlo,monospace;
+  --pad:clamp(20px,5vw,64px);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 var(--sans);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;cursor:none;
+}
+@media(pointer:coarse){body{cursor:auto}}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+::selection{background:rgba(255,73,73,.3)}
+.wrap{width:100%;max-width:1280px;margin:0 auto;padding:0 var(--pad)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.serif{font-family:var(--serif);font-weight:600}
+
+/* 背景：三层光 + 细网格 */
+.back{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(900px 620px at 78% -6%, rgba(255,59,59,.10), transparent 62%),
+    radial-gradient(760px 520px at 4% 24%, rgba(90,100,220,.06), transparent 64%),
+    radial-gradient(700px 500px at 50% 112%, rgba(255,59,59,.05), transparent 66%);
+}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;
+  background-image:radial-gradient(rgba(0,0,0,.05) 1px, transparent 1px);
+  background-size:3px 3px}
+.grid{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.45;
+  background-image:linear-gradient(rgba(0,0,0,.028) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,0,0,.028) 1px,transparent 1px);
+  background-size:80px 80px;
+  -webkit-mask-image:radial-gradient(circle at 50% 24%,#000 0%,transparent 76%);
+  mask-image:radial-gradient(circle at 50% 24%,#000 0%,transparent 76%)}
+main,header,footer{position:relative;z-index:2}
+
+/* 光标 */
+#dot,#ring{position:fixed;left:0;top:0;border-radius:50%;pointer-events:none;z-index:90;
+  transform:translate(-50%,-50%);will-change:transform}
+#dot{width:6px;height:6px;background:#111}
+#ring{width:30px;height:30px;border:1px solid rgba(0,0,0,.30);
+  transition:width .3s cubic-bezier(.22,.7,.3,1),height .3s cubic-bezier(.22,.7,.3,1),border-color .3s,background .3s}
+body.hot #ring{width:64px;height:64px;border-color:rgba(255,59,59,.9);background:rgba(255,59,59,.07)}
+@media(pointer:coarse){#dot,#ring{display:none}}
+
+/* 进度条 */
+#bar{position:fixed;left:0;top:0;height:1.5px;width:0;background:var(--red);z-index:95;
+  transition:width .1s linear}
+
+/* ══════════ 顶栏 ══════════ */
+.top{position:fixed;inset:0 0 auto;z-index:80;height:72px;display:flex;align-items:center;
+  border-bottom:1px solid transparent;transition:background .4s,border-color .4s}
+.top.on{background:rgba(236,236,236,.78);backdrop-filter:blur(20px);border-bottom-color:var(--line)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600;letter-spacing:.01em}
+.logo svg{width:15px;height:15px;fill:var(--red)}
+.top nav{display:flex;gap:30px}
+.top nav a{font-size:12.5px;color:var(--fg2);letter-spacing:.04em;position:relative;transition:color .3s}
+.top nav a::after{content:"";position:absolute;left:0;right:100%;bottom:-4px;height:1px;background:var(--red);
+  transition:right .35s cubic-bezier(.22,.7,.3,1)}
+.top nav a:hover{color:var(--fg)}
+.top nav a:hover::after{right:0}
+@media(max-width:900px){.top nav{display:none}}
+
+/* ══════════ 首屏 ══════════ */
+.hero{padding:clamp(120px,16vh,190px) 0 clamp(60px,10vh,110px);min-height:100vh;display:flex;align-items:center}
+.hero .wrap{display:grid;grid-template-columns:1.06fr .94fr;gap:clamp(20px,3vw,48px);align-items:center}
+.tag{display:inline-flex;align-items:center;gap:12px;font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.26em;color:var(--fg3);margin-bottom:clamp(20px,3vh,34px)}
+.tag i{display:block;width:28px;height:1px;background:var(--red)}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(36px,5.2vw,74px);line-height:1.08;
+  letter-spacing:.005em;margin:0 0 clamp(18px,2.6vh,30px);text-wrap:balance}
+h1 em{font-style:normal;color:var(--red)}
+.hero p{color:var(--fg2);font-size:clamp(14.5px,1.3vw,17px);line-height:1.85;
+  max-width:36ch;margin:0 0 clamp(26px,3.6vh,40px)}
+.acts{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:10px;height:50px;padding:0 28px;border-radius:99px;
+  font-size:13.5px;letter-spacing:.05em;position:relative;overflow:hidden;
+  transition:transform .3s cubic-bezier(.22,.7,.3,1),color .3s}
+.btn span{position:relative;z-index:1}
+.btn.p{background:#0A0A0A;color:#fff}
+.btn.p::before{content:"";position:absolute;inset:0;background:var(--red);transform:translateY(101%);
+  transition:transform .45s cubic-bezier(.22,.7,.3,1)}
+.btn.p:hover::before{transform:translateY(0)}
+.btn.p:hover{color:#fff}
+.btn.g{border:1px solid rgba(0,0,0,.18);color:var(--fg)}
+.btn.g:hover{border-color:rgba(0,0,0,.45)}
+.hint{margin-top:clamp(22px,3vh,34px);font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.16em;color:var(--fg3)}
+
+/* 吉祥物舞台：多层视差 */
+.stage{position:relative;height:min(62vh,540px);display:grid;place-items:center;overflow:hidden}
+.stage::before{content:"";position:absolute;width:74%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 50% 42%, #F7F7F7 0%, #E6E6E6 62%, rgba(230,230,230,0) 72%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+.layer{position:absolute;inset:0;display:grid;place-items:center;will-change:transform}
+.halo{width:76%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,73,73,.26),transparent 66%);filter:blur(18px)}
+.ring1{width:74%;aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.06)}
+.ring2{width:92%;aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.032)}
+.mascot{width:min(86%,430px);aspect-ratio:1;background:url(assets/mascot-light.png) center/contain no-repeat;
+  animation:float 6.6s ease-in-out infinite;
+  -webkit-mask-image:linear-gradient(to bottom,#000 86%,rgba(0,0,0,0) 100%);
+  mask-image:linear-gradient(to bottom,#000 86%,rgba(0,0,0,0) 100%)}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.bub{position:absolute;padding:8px 15px;border-radius:99px;background:rgba(255,255,255,.86);
+  border:1px solid rgba(0,0,0,.07);color:#3A3A3A;font-size:11.5px;white-space:nowrap;
+  backdrop-filter:blur(12px);box-shadow:0 10px 26px rgba(0,0,0,.10);z-index:3}
+.bub.a{left:0;top:9%}
+.bub.b{right:-2%;top:47%}
+.bub.c{left:3%;bottom:13%}
+@media(max-width:900px){
+  .hero{padding:110px 0 50px;min-height:auto}
+  .hero .wrap{grid-template-columns:1fr;gap:16px}
+  .stage{height:min(46vh,340px);order:-1;overflow:visible}
+  .mascot{width:min(68%,250px)}
+  .bub{font-size:10.5px;padding:6px 11px}
+  .bub.a{left:0;top:6%}.bub.b{right:0;top:52%}.bub.c{display:none}
+}
+
+/* ══════════ 跑马灯 ══════════ */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:22px 0;overflow:hidden;display:flex;gap:0}
+.marquee .track{display:flex;gap:56px;white-space:nowrap;animation:mv 42s linear infinite;will-change:transform}
+.marquee .track span{font-family:var(--serif);font-size:clamp(18px,2.2vw,30px);color:var(--fg3);letter-spacing:.04em}
+.marquee .track span b{color:var(--red);font-weight:400}
+@keyframes mv{to{transform:translateX(-50%)}}
+
+/* ══════════ 通用段落 ══════════ */
+section{padding:clamp(70px,11vh,130px) 0;position:relative}
+h2{font-family:var(--serif);font-weight:600;font-size:clamp(26px,3.6vw,50px);line-height:1.16;
+  margin:0 0 14px;letter-spacing:.01em;position:relative;z-index:1}
+.sec{position:relative}
+.sec::before{content:attr(data-no);position:absolute;right:var(--pad);top:.06em;
+  font-family:var(--mono);font-size:clamp(90px,16vw,220px);font-weight:500;letter-spacing:-.05em;
+  color:rgba(0,0,0,.035);line-height:1;pointer-events:none;z-index:0}
+.lead{color:var(--fg2);font-size:clamp(14px,1.25vw,16.5px);line-height:1.85;max-width:44ch;
+  margin:0 0 clamp(30px,5vh,54px)}
+.kicker{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;color:var(--fg3);margin-bottom:16px}
+
+/* 揭示：clip 擦出 */
+.rv{opacity:0;transform:translateY(26px);
+  transition:opacity .9s cubic-bezier(.22,.7,.3,1),transform .9s cubic-bezier(.22,.7,.3,1)}
+.rv.on{opacity:1;transform:none}
+h1 .ln,h2 .ln{display:block;overflow:hidden}
+h1 .ln>i,h2 .ln>i{display:block;font-style:normal;transform:translateY(110%);
+  transition:transform 1.1s cubic-bezier(.19,1,.22,1)}
+.on h1 .ln>i,.on h2 .ln>i,h1.on .ln>i,h2.on .ln>i{transform:none}
+
+/* ══════════ Desktop窗口 ══════════ */
+.macw{position:relative;width:100%;aspect-ratio:2730/1535;opacity:0;transform:perspective(1800px) rotateX(6deg);
+  transform-origin:50% 0;transition:transform 1.1s cubic-bezier(.19,1,.22,1),opacity .9s;
+  filter:drop-shadow(0 40px 70px rgba(0,0,0,.22))}
+.macw.on{opacity:1;transform:none}
+.macw .mac{width:100%;display:block}
+.macw .appwin{position:absolute;left:18.4%;top:13.4%;width:62.4%;height:69.4%;
+  border-radius:3px;overflow:hidden;background:#fff;
+  box-shadow:0 16px 40px rgba(0,0,0,.30), 0 3px 8px rgba(0,0,0,.16), 0 0 0 .5px rgba(0,0,0,.20)}
+/* 没有标题栏：三个圆点直接浮在页面上 */
+.macw .appbar{position:absolute;left:4px;top:1px;z-index:3;display:flex;gap:2px;
+  pointer-events:none;mix-blend-mode:normal}
+.macw .appbar i{width:3.4px;height:3.4px;border-radius:50%;background:#E5A39F}
+.macw .appbar i:nth-child(1){background:#E5A39F}
+.macw .appbar i:nth-child(2){background:#E6D2A0}
+.macw .appbar i:nth-child(3){background:#A6D6B6}
+.macw .appbody{position:absolute;inset:0;background:#fff;overflow:hidden}
+.macw .shot{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:top left;
+  opacity:0;transition:opacity .6s}
+.macw .shot.on{opacity:1}
+
+.win .bar{height:38px;display:flex;align-items:center;gap:7px;padding:0 16px;background:#F4F4F4;
+  border-bottom:1px solid rgba(0,0,0,.08)}
+.win .bar i{width:9px;height:9px;border-radius:50%;background:#D2D2D2}
+.win .bar i:nth-child(1){background:#E8A9A6}
+.win .bar i:nth-child(2){background:#EBD9A5}
+.win .bar i:nth-child(3){background:#A9DEC0}
+.win .bar b{margin-left:12px;font-weight:400;font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.1em;color:var(--fg3)}
+.shots{position:relative;aspect-ratio:2560/1720;background:#fff}
+.shots img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
+  transform:scale(1.015);transition:opacity .7s,transform .9s cubic-bezier(.22,.7,.3,1)}
+.shots img.on{opacity:1;transform:none}
+.wtabs{display:flex;gap:6px;margin-top:20px;flex-wrap:wrap}
+.wtabs button{appearance:none;background:none;border:1px solid rgba(0,0,0,.14);
+  color:var(--fg3);font-size:12px;padding:7px 15px;border-radius:99px;cursor:none;
+  transition:color .3s,border-color .3s,background .3s}
+.wtabs button.on{color:var(--fg);border-color:#0A0A0A;background:rgba(0,0,0,.04)}
+.wtabs button:hover{color:var(--fg)}
+.wnote{display:flex;justify-content:space-between;gap:16px;margin-top:18px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--fg3)}
+
+
+@media(max-width:900px){
+  .macw .appbar{left:4px;top:4px;gap:1.5px}
+  .macw .appbar i{width:2.4px;height:2.4px}
+}
+
+/* ══════════ 手机 ══════════ */
+.phone{display:grid;grid-template-columns:.92fr 1.08fr;gap:clamp(24px,4vw,56px);align-items:center}
+.devwrap{position:relative;height:min(74vh,680px);display:grid;place-items:center;overflow:visible}
+.devwrap::after{content:"";position:absolute;bottom:14%;width:38%;height:14px;border-radius:50%;
+  background:radial-gradient(ellipse, rgba(0,0,0,.10), rgba(0,0,0,0) 74%);filter:blur(6px);z-index:1}
+.dev{position:absolute;width:300px;aspect-ratio:658/827;background:transparent;transform-origin:center center;z-index:2;
+  opacity:0;transform:translateY(30px) scale(1.5);
+  transition:opacity .25s,transform .5s cubic-bezier(.22,.7,.3,1);
+  filter:drop-shadow(0 18px 34px rgba(0,0,0,.22))}
+.dev .bez{position:relative;z-index:2;width:100%;display:block;pointer-events:none}
+.dev .scr{position:absolute;left:27.51%;top:11.49%;width:45.14%;height:78.11%;
+  object-fit:fill;border-radius:0;z-index:1;background:#FBFAF7}
+.dev.on{opacity:1;transform:scale(1.5)}
+
+
+.pbar{display:flex;gap:6px;margin:26px 0 26px}
+.pbar i{width:24px;height:1.5px;background:rgba(0,0,0,.16);cursor:none;transition:width .3s,background .3s}
+.pbar i.on{width:44px;background:var(--red)}
+.plist{display:grid;gap:16px}
+.pitem{display:flex;gap:14px;align-items:flex-start;color:var(--fg2);font-size:14px}
+.pitem b{color:var(--fg);font-weight:600;margin-right:8px}
+.pitem .ic{flex:none;width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.6);
+  display:grid;place-items:center;margin-top:-2px}
+.pitem .ic svg{width:14px;height:14px;stroke:var(--red);fill:none;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:900px){
+  .phone{grid-template-columns:1fr;gap:32px}
+  .devwrap{height:min(58vh,470px);overflow:visible}
+  .dev{width:250px}
+  .dev{transform:translateY(30px) scale(1.5)}
+  .dev.on{transform:scale(1.5)}
+}
+
+/* ══════════ Features总览 ══════════ */
+.fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:0 clamp(30px,5vw,80px)}
+.fgroup{background:rgba(255,255,255,.55);border:1px solid rgba(0,0,0,.06);border-radius:16px;
+  padding:24px 24px 26px;margin-bottom:14px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03), 0 10px 28px -18px rgba(0,0,0,.18);
+  transition:background .35s,box-shadow .35s,transform .35s}
+.fgroup:hover{background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.04), 0 22px 50px -26px rgba(0,0,0,.26)}
+.fgroup-h{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.fgroup-h svg{width:17px;height:17px;stroke:var(--red);fill:none;stroke-width:1.5;
+  stroke-linecap:round;stroke-linejoin:round}
+.fgroup-h span{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--fg3)}
+.flist{display:grid;gap:14px}
+.fi{display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:baseline;
+  padding:4px 0;transition:transform .4s cubic-bezier(.22,.7,.3,1),opacity .3s}
+.fi b{font-family:var(--serif);font-size:15px;font-weight:600}
+.fi span{color:var(--fg2);font-size:13px;line-height:1.65}
+.fi:hover{transform:translateX(6px)}
+.fi:hover b{color:var(--red)}
+@media(max-width:900px){
+  .fgrid{grid-template-columns:1fr}
+  .fi{grid-template-columns:78px 1fr}
+}
+
+/* ══════════ 叙事 ══════════ */
+.story{position:relative}
+.pin{position:sticky;top:0;height:100vh;display:grid;grid-template-columns:minmax(0,1fr) 380px;max-width:1160px;margin:0 auto;padding:0 var(--pad);
+  align-items:center;overflow:hidden;max-width:1120px;margin:0 auto;padding:0 var(--pad);
+  gap:clamp(28px,5vw,72px)}
+.scopy{position:relative;width:100%;min-height:340px}
+.step{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+  opacity:0;pointer-events:none;transition:opacity .6s}
+.step.on{opacity:1;pointer-events:auto}
+.step .n{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;color:var(--fg3);margin-bottom:20px}
+.step h3{font-family:var(--serif);font-weight:600;font-size:clamp(26px,3.4vw,46px);
+  line-height:1.2;margin:0 0 18px}
+.step p{color:var(--fg2);font-size:clamp(14px,1.3vw,16px);line-height:1.85;max-width:30ch;margin:0}
+.step .say{margin-top:24px;padding:16px 20px;border-left:2px solid var(--red);
+  background:rgba(255,255,255,.75);border-radius:0 10px 10px 0;font-size:13.5px;color:var(--fg)}
+.svis{position:relative;height:100vh;display:grid;place-items:center;overflow:hidden}
+.svis .dev{position:absolute;width:316px}
+.sprog{position:absolute;left:50%;bottom:4vh;transform:translateX(-50%);display:flex;gap:6px;z-index:4}
+.sprog i{width:30px;height:1.5px;background:rgba(0,0,0,.16);cursor:none}
+.sprog i.on{background:var(--red)}
+@media(min-width:901px){.story{height:400vh}}
+@media(max-width:900px){
+  .pin{position:static;height:auto;grid-template-columns:1fr;gap:8px;overflow:visible}
+  /* 手机：四幕依次排开，不做滚动切换，也不再裁切 */
+  .svis{order:-1;height:auto;overflow:visible;display:grid;place-items:center;padding:0 0 26px}
+  .svis .dev{position:absolute;width:330px}
+  .svis{position:relative;min-height:440px}
+  .svis .dev:not(:first-child){display:none}
+  .svis .dev:first-child{position:relative;opacity:1;transform:none}
+  .step{position:relative;left:auto;right:auto;top:auto;transform:none;display:block;opacity:1;
+    pointer-events:auto;padding:22px 0;border-top:1px solid var(--line)}
+  .step:first-child{border-top:0}
+  .step h3{font-size:24px;margin-bottom:10px}
+  .step p{max-width:none}
+  .step .say{margin-top:16px}
+  .sprog{display:none}
+}
+
+/* ══════════ 数字 ══════════ */
+.facts{border-top:1px solid var(--line)}
+.facts .row{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(16px,3vw,40px);
+  padding-top:clamp(40px,7vh,72px);padding-bottom:clamp(40px,7vh,72px)}
+.fact b{display:block;font-family:var(--mono);font-size:clamp(44px,6vw,84px);font-weight:500;
+  letter-spacing:-.03em;line-height:1;margin-bottom:12px}
+.fact span{font-size:12px;color:var(--fg3);letter-spacing:.04em}
+@media(max-width:900px){
+  .facts .row{grid-template-columns:1fr;gap:26px}
+  .fact b{font-size:46px}
+}
+
+/* ══════════ Download ══════════ */
+.dl{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.dl a{border:1px solid var(--line);border-radius:14px;padding:22px 20px;background:rgba(255,255,255,.55);
+  transition:border-color .35s,transform .35s cubic-bezier(.22,.7,.3,1),background .35s;position:relative;overflow:hidden}
+.dl a::after{content:"";position:absolute;inset:auto 0 0;height:1px;background:var(--red);
+  transform:scaleX(0);transform-origin:left;transition:transform .45s cubic-bezier(.22,.7,.3,1)}
+.dl a:hover{border-color:rgba(0,0,0,.22);transform:translateY(-3px);background:#fff}
+.dl a:hover::after{transform:scaleX(1)}
+.dl h3{margin:0 0 8px;font-size:14.5px;font-weight:600;display:flex;align-items:center;gap:8px}
+.dl h3 em{font-style:normal;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+  color:var(--red);border:1px solid rgba(255,59,59,.34);padding:2px 6px;border-radius:4px}
+.dl span{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--fg3)}
+@media(max-width:900px){.dl{grid-template-columns:1fr 1fr;gap:10px}}
+
+/* ══════════ 页脚 ══════════ */
+footer{border-top:1px solid var(--line);padding:clamp(40px,7vh,72px) 0 clamp(50px,9vh,90px)}
+footer .top-row{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;margin-bottom:40px}
+footer .mark{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600}
+footer .mark svg{width:13px;height:13px;fill:var(--red)}
+footer nav{display:flex;gap:24px;flex-wrap:wrap;font-size:12.5px;color:var(--fg3)}
+footer nav a:hover{color:var(--fg)}
+footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--fg3)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* 会长：时间轴 + Extension */
+.timeline{position:relative;margin:10px 0 0;padding-left:26px;border-left:1px solid var(--line)}
+.tl{position:relative;padding:0 0 34px 26px}
+.tl::before{content:"";position:absolute;left:-32px;top:9px;width:9px;height:9px;border-radius:50%;
+  background:var(--bg);border:1px solid rgba(0,0,0,.28)}
+.tl:first-child::before{background:var(--red);border-color:var(--red)}
+.tl-d{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--fg3);margin-bottom:6px}
+.tl-c b{display:block;font-family:var(--serif);font-size:19px;font-weight:600;margin-bottom:4px}
+.tl-c span{color:var(--fg2);font-size:14px;line-height:1.75}
+.ext{margin-top:76px}
+.ext h3{font-family:var(--serif);font-weight:600;font-size:clamp(22px,2.6vw,32px);margin:0 0 12px}
+.ext h3 em{font-style:normal;color:var(--red)}
+.ext p{color:var(--fg2);font-size:15px;line-height:1.85;max-width:46ch;margin:0 0 28px}
+.ext-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.ext-i{background:rgba(255,255,255,.55);border:1px solid rgba(0,0,0,.06);border-radius:12px;padding:18px 20px}
+.ext-i b{display:block;font-size:14.5px;font-weight:600;margin-bottom:5px}
+.ext-i span{color:var(--fg2);font-size:13px;line-height:1.7}
+@media(max-width:900px){
+  .timeline{padding-left:18px}
+  .tl{padding:0 0 26px 18px}
+  .tl::before{left:-23px}
+  .ext{margin-top:56px}
+  .ext-grid{grid-template-columns:1fr}
+}
+
+/* How it works：节首 */
+.story-head{position:absolute;top:92px;left:0;right:0;z-index:4;pointer-events:none;
+  width:100%;padding:0 var(--pad);text-align:right}
+@media(min-width:901px){.story-head h2,.story-head .lead{display:none}}
+@media(max-width:900px){
+  .story-head{position:static;order:-2;padding:0 var(--pad) 6px;pointer-events:auto;text-align:left}
+  .story-head h2{display:block;font-size:30px;margin-bottom:12px}
+  .story-head .lead{display:block;margin-bottom:18px}
+}
+
+/* How it works：角落大号水印数字（与其它节一致） */
+.story-wm{position:absolute;left:calc(50% - 580px + var(--pad));top:14vh;z-index:0;pointer-events:none;
+  font-family:var(--mono);font-size:clamp(90px,13vw,190px);font-weight:500;
+  letter-spacing:-.05em;line-height:1;color:rgba(0,0,0,.035)}
+@media(max-width:900px){.story-wm{display:none}}
+
+/* Desktop：滚动驱动（与「How it works」同一套手感） */
+.dstory{position:relative}
+.dpin{position:sticky;top:0;height:100vh;display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr);
+  align-items:center;gap:clamp(20px,3vw,48px);max-width:1420px;margin:0 auto;padding:0 var(--pad);
+  overflow:hidden}
+.dcopy{position:relative;min-height:300px;width:100%}
+.dstep{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);opacity:0;
+  pointer-events:none;transition:opacity .5s}
+.dstep.on{opacity:1;pointer-events:auto}
+.dstep .n{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;color:var(--fg3);margin-bottom:16px}
+.dstep h3{font-family:var(--serif);font-weight:600;font-size:clamp(24px,3.2vw,44px);line-height:1.22;margin:0 0 16px}
+.dstep p{color:var(--fg2);font-size:clamp(14px,1.3vw,16px);line-height:1.85;max-width:30ch;margin:0}
+.dvis{position:relative;width:100%;display:grid;place-items:center}
+.dvis .macw{width:100%}
+.dprog{position:absolute;left:50%;bottom:4vh;transform:translateX(-50%);display:flex;gap:5px;z-index:4}
+.dprog i{width:22px;height:2px;border-radius:2px;background:rgba(0,0,0,.14)}
+.dprog i.on{background:var(--red)}
+@media(min-width:901px){.dstory{height:960vh}}
+@media(max-width:900px){
+  .dstory{height:auto;padding:84px 0 40px}
+  .dpin{position:static;height:auto;grid-template-columns:1fr;gap:26px;overflow:visible}
+  .dcopy{min-height:0}
+  .dstep{position:relative;left:auto;right:auto;top:auto;transform:none;display:none}
+  .dstep.on{display:block}
+  .dvis{width:100%}
+  .dprog{position:static;transform:none;margin:18px auto 0;justify-content:center}
+}
+
+/* 成长：时间轴 + 右栏 */
+.grow-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);
+  gap:clamp(40px,7vw,110px);align-items:start;margin-top:8px}
+.grow-note{border-left:1px solid var(--line);padding-left:28px}
+.grow-note p{color:var(--fg2);font-size:14.5px;line-height:1.9;margin:0 0 16px}
+.grow-num{margin-top:28px}
+.grow-num b{display:block;font-family:var(--serif);font-size:44px;line-height:1;letter-spacing:-.02em}
+.grow-num span{font-size:12.5px;color:var(--fg3);letter-spacing:.02em}
+@media(max-width:900px){
+  .grow-grid{grid-template-columns:1fr;gap:32px}
+  .grow-note{border-left:0;border-top:1px solid var(--line);padding:24px 0 0}
+}
+
+/* 语言开关 */
+.lang{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--fg2);
+  border:1px solid rgba(0,0,0,.16);border-radius:20px;padding:5px 12px;text-decoration:none;
+  transition:color .2s,border-color .2s,background .2s;margin-left:18px}
+.lang:hover{color:var(--fg);border-color:rgba(0,0,0,.42);background:rgba(0,0,0,.03)}
+@media(max-width:900px){.lang{margin-left:10px;padding:4px 10px;font-size:10px}}
+
+/* 语言切换：两格小胶囊，当前语言高亮 */
+.langsw{display:inline-flex;align-items:center;gap:2px;margin-left:20px;padding:2px;
+  border:1px solid rgba(0,0,0,.14);border-radius:20px;background:rgba(255,255,255,.5)}
+.langsw a{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-decoration:none;
+  color:var(--fg3);padding:3px 9px;border-radius:16px;transition:color .18s,background .18s}
+.langsw a:hover{color:var(--fg)}
+.langsw a.on{color:#fff;background:var(--fg)}
+@media(max-width:900px){.langsw{margin-left:10px}.langsw a{padding:2px 7px;font-size:9.5px}}
+</style>
+</head>
+<body>
+<div class="back"></div><div class="grid"></div><div class="grain"></div>
+<div id="bar"></div><div id="ring"></div><div id="dot"></div>
+
+<header class="top" id="top">
+  <div class="wrap">
+    <a class="logo" href="#"><svg viewBox="0 0 24 24"><path d="M12 2.6 13.8 10 21 12l-7.2 2L12 21.4 10.2 14 3 12l7.2-2Z"/></svg>Aster</a>
+    <nav>
+      <a href="#desktop">Desktop</a>
+      <a href="#phone">Phone</a>
+      <a href="#features">Features</a>
+      <a href="#story">How it works</a>
+      <a href="#dl">Download</a>
+    <div class="langsw"><a href="index.html" onclick="localStorage.setItem('lang','zh')">中文</a><a class="on" href="en.html" onclick="localStorage.setItem('lang','en')">EN</a></div></nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <div class="tag rv"><i></i>LOCAL · PRIVATE · ALIVE</div>
+        <h1 class="rv"><span class="ln"><i>Ta remembers.</i></span><span class="ln"><i>And gets the <em>work done</em>.</i></span></h1>
+        <p class="rv">Everything said, everything done, stays on this machine. No cloud. No account.</p>
+        <div class="acts rv">
+          <a class="btn p" href="#dl"><span>Download</span></a>
+          <a class="btn g" href="#desktop"><span>Have a look</span></a>
+        </div>
+        <div class="hint rv">macOS · Windows · Android · HarmonyOS</div>
+      </div>
+      <div class="stage" id="stage">
+        <div class="layer" data-depth="0.4"><div class="halo"></div></div>
+        <div class="layer" data-depth="0.7"><div class="ring2"></div></div>
+        <div class="layer" data-depth="1.1"><div class="ring1"></div></div>
+        <div class="layer" data-depth="2.2"><div class="mascot"></div></div>
+        <div class="bub a">Keeps what you told it</div>
+        <div class="bub b">Has moods, comes back</div>
+        <div class="bub c">Reads files, writes docs, runs code</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="marquee"><div class="track" id="track"></div></div>
+
+  <section id="grow" class="sec" data-no="01">
+    <div class="wrap">
+      <div class="kicker rv">01 — It grows</div>
+      <h2 class="rv"><span class="ln"><i>Not installed once.<br>Grown over time.</i></span></h2>
+      <p class="lead rv">Fresh out of the box, Ta knows nothing. Every conversation after leaves something behind.</p>
+      <div class="grow-grid">
+      <div class="timeline">
+        <div class="tl rv"><div class="tl-d">First meeting</div><div class="tl-c"><b>Blank</b><span>No history yet. It can only answer.</span></div></div>
+        <div class="tl rv"><div class="tl-d">A few words in</div><div class="tl-c"><b>Habits appear</b><span>Your hours, your taste, the deadlines that come around again.</span></div></div>
+        <div class="tl rv"><div class="tl-d">A while later</div><div class="tl-c"><b>Catches half a sentence</b><span>What you left unsaid still lines up.</span></div></div>
+        <div class="tl rv"><div class="tl-d">Long enough</div><div class="tl-c"><b>Knows when to hold back</b><span>Reads your state before it speaks: silent when silence is right, one line when that is enough.</span></div></div>
+      </div>
+        <aside class="grow-note">
+          <p>None of this is hard-coded. What Ta keeps is concrete: when you sleep, that the weekly report is due Wednesday, which sentence stung last time.</p>
+          <p>It does not take long. It starts with the first sentence — each one after is a little more accurate than the last.</p>
+          <p>Move to another machine, take the package with you: still the same Ta.</p>
+        </aside>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="desktop" class="sec dstory" data-no="02">
+    <div class="dpin">
+      <div class="story-head"><div class="kicker">02 — Desktop</div></div>
+      <div class="dcopy" id="dcopy">
+        <div class="dstep on"><div class="n">01 / Talk</div><h3>Everything you said is here</h3><p>One sentence out, one back. Everything is filed by day and can be found again.</p></div>
+        <div class="dstep"><div class="n">02 / Desk</div><h3>Queued, running, stuck</h3><p>Queued, running, blocked, done. Open any one and see which steps it ran.</p></div>
+        <div class="dstep"><div class="n">03 / Memory</div><h3>What it remembers lives here</h3><p>Newest first, sorted by tag. Anything you would rather not keep can be forgotten on the spot.</p></div>
+        <div class="dstep"><div class="n">04 / Calendar</div><h3>One sentence to file it</h3><p>It reads the time by itself and reminds you when it comes. For a trip it works out the travel time in advance.</p></div>
+        <div class="dstep"><div class="n">05 / Character</div><h3>A different name is fine</h3><p>Name, temperament and face all sit on this page. The expression follows the mood; tap one to hold it.</p></div>
+        <div class="dstep"><div class="n">06 / Coding</div><h3>Code is fine too</h3><p>Open a job: it reads, edits, runs the tests. If something is wrong, it rolls back.</p></div>
+        <div class="dstep"><div class="n">07 / Council</div><h3>Several models think together</h3><p>One question, a proposal from each, holes picked in every proposal, then a single version.</p></div>
+        <div class="dstep"><div class="n">08 / Skills</div><h3>Hands it grows</h3><p>Write your own, install someone else's, every call recorded. Delete it and nothing is left behind.</p></div>
+        <div class="dstep"><div class="n">09 / Settings</div><h3>All local</h3><p>Model, appearance, where memory lives, how far permissions reach: all of it applies to this machine only.</p></div>
+      </div>
+      <div class="dvis">
+        <div class="macw on" id="win">
+          <img class="mac" src="assets/macbook.png" alt="">
+          <div class="appwin" id="appwin">
+            <div class="appbar"><i></i><i></i><i></i></div>
+            <div class="appbody">
+              <img class="shot on" src="shots3/en-d-chat.png?v=1" alt="">
+              <img class="shot" src="shots3/en-d-work.png?v=1" alt="">
+              <img class="shot" src="shots3/en-d-mem.png?v=1" alt="">
+              <img class="shot" src="shots3/en-d-trip.png?v=1" alt="">
+              <img class="shot" src="shots3/en-d-role.png?v=1" alt="">
+              <img class="shot" src="shots3/en-d-code.png?v=1" alt="">
+              <img class="shot" src="shots3/en-d-debate.png?v=1" alt="">
+              <img class="shot" src="shots3/en-d-skill.png?v=1" alt="">
+              <img class="shot" src="shots3/en-d-set.png?v=1" alt="">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dprog" id="dprog"></div>
+    </div>
+  </section>
+
+  <section id="phone" class="sec" data-no="03">
+    <div class="wrap phone">
+      <div>
+        <div class="kicker rv">03 — Phone</div>
+        <h2 class="rv"><span class="ln"><i>On the phone it is Ta —</i></span><span class="ln"><i>not someone else.</i></span></h2>
+        <p class="lead rv">No model runs here. When it cannot reach home, recent words are still there — and you can still say something first.</p>
+        <div class="pbar" id="pbar"><i class="on"></i><i></i><i></i><i></i></div>
+        <div class="plist">
+          <div class="pitem"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 1 1-3.2-6.4"/><path d="M21 4v5h-5"/></svg></span><span><b>Talk</b>Long-press to copy or quote; the reply lands under that line</span></div>
+          <div class="pitem"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></span><span><b>Assign</b>Hand over one sentence, the work lands on your desktop</span></div>
+          <div class="pitem"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4"/></svg></span><span><b>Initiative</b>Stuck or done, Ta speaks first</span></div>
+          <div class="pitem"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 4h9l4 4v12H6z"/><path d="M9 13h7M9 17h4"/></svg></span><span><b>Offline</b>Cached words stay visible, and what you asked is kept</span></div>
+        </div>
+      </div>
+      <div class="devwrap" id="devwrap">
+        <div class="dev on"><img class="scr" src="shots3/en-talk.png?v=1?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/en-tool.png?v=1?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/en-trip.png?v=1?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/en-mem.png?v=1?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="sec" data-no="04">
+    <div class="wrap">
+      <div class="kicker rv">04 — Everything</div>
+      <h2 class="rv"><span class="ln"><i>Twenty-six small things</i></span></h2>
+      <p class="lead rv">Six groups, by use. Every line is something you can understand.</p>
+      <div class="fgrid" id="fgrid"></div>
+
+      <div class="ext">
+        <div class="kicker rv">Extension</div>
+        <h3 class="rv">Beyond what is built in</h3>
+        <p class="rv">The twenty-six are a starting set, not a ceiling. Work you repeat can be written as a skill, or brought in from someone else; every step is recorded, and anything no longer needed can be removed.</p>
+        <div class="ext-grid rv">
+          <div class="ext-i"><b>Write your own</b><span>Fold a repeated sequence into one entry, or attach a script you already have.</span></div>
+          <div class="ext-i"><b>Bring in another's</b><span>Pick one from the catalogue, or give a GitHub address; once installed it can be called.</span></div>
+          <div class="ext-i"><b>Every call recorded</b><span>Which tool was used and which file changed — every step can be looked up.</span></div>
+          <div class="ext-i"><b>Remove any time</b><span>Skills are files. Remove one and nothing is left behind.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="story" id="story" data-no="05">
+    <div class="pin">
+      <div class="story-wm" aria-hidden="true">05</div>
+      <div class="story-head">
+        <div class="kicker">05 — How it works</div>
+        <h2 class="rv"><span class="ln"><i>From one sentence<br>to one finished thing</i></span></h2>
+        <p class="lead rv">Say it and walk away. Ta breaks it down, calls what it needs, writes the result down — and comes back if it gets stuck.</p>
+      </div>
+      <div class="scopy">
+        <div class="step on">
+          <div class="n">01 / Say it</div>
+          <h3>Hand over one sentence.<br>Ta arranges the rest.</h3>
+          <p>Nothing to learn. Speak the way you normally do; Ta asks what is unclear, then starts.</p>
+          <div class="say">“Sort the three quotes on my desktop by date.”</div>
+        </div>
+        <div class="step">
+          <div class="n">02 / Break it down</div>
+          <h3>Broken into steps,<br>every step visible</h3>
+          <p>Read the desktop, compare dates, build the summary. Which file was touched is shown on screen.</p>
+          <div class="say">Three steps, four calls, one summary sheet.</div>
+        </div>
+        <div class="step">
+          <div class="n">03 / Tell you</div>
+          <h3>Comes back when done.<br>Speaks up when stuck.</h3>
+          <p>The result lands on the desktop and Ta tells you where. It does not go quiet when stuck.</p>
+          <div class="say">“The summary is on your desktop. Two expire within a week — I marked them in red.”</div>
+        </div>
+        <div class="step">
+          <div class="n">04 / Remember</div>
+          <h3>Said once this time.<br>Not again next time.</h3>
+          <p>It fades with time and comes back when you mention it. Anything you want forgotten, you forget.</p>
+          <div class="say">“He likes a quieter interface. Nothing flashy.”</div>
+        </div>
+      </div>
+      <div class="svis" id="svis">
+        <div class="dev on"><img class="scr" src="shots3/en-talk.png?v=1?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/en-tool.png?v=1?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/en-trip.png?v=1?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/en-mem.png?v=1?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+      </div>
+      <div class="sprog" id="sprog"><i class="on"></i><i></i><i></i><i></i></div>
+    </div>
+  </section>
+
+
+  <section class="facts">
+    <div class="wrap row">
+      <div class="fact"><b data-n="1">1</b><span>copy of memory, on this machine only</span></div>
+      <div class="fact"><b data-n="0">0</b><span>conversations ever went through our servers</span></div>
+      <div class="fact"><b data-n="3">3</b><span>levels of permission; deletion always asks first</span></div>
+      <div class="fact"><b>Any time</b><span>Export, migrate, erase completely</span></div>
+    </div>
+  </section>
+
+  <section id="dl" class="sec" data-no="06">
+    <div class="wrap">
+      <div class="kicker rv">06 — Download</div>
+      <h2 class="rv"><span class="ln"><i>Start with the desktop app</i></span></h2>
+      <p class="lead rv">That is where Ta lives. The phone comes after: install it, then pair.</p>
+      <div class="dl" id="dlrow"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="top-row">
+      <div class="mark"><svg viewBox="0 0 24 24"><path d="M12 2.6 13.8 10 21 12l-7.2 2L12 21.4 10.2 14 3 12l7.2-2Z"/></svg>Aster</div>
+      <nav>
+        <a href="privacy.html">Privacy</a><a href="terms.html">Terms</a>
+        <a href="docs.html">Install guide</a>
+      </nav>
+    </div>
+    <div class="last"><span>© 2026 Aster</span><span>Memory and mood stay on this machine. Nothing is uploaded.</span></div>
+  </div>
+</footer>
+
+<script>
+if (localStorage.getItem('lang') === 'zh') location.replace('index.html');
+/* ───── 数据 ───── */
+const GROUPS = [
+  {ic:'chat', name:'Talk', items:[['Talk','Multi-turn chat, streams as it writes, can be read aloud'],['Voice','Transcribed locally; it hears you offline too'],['Images','Reads pictures, picks out text, compares versions'],['Quote','Copy or quote; the reply lands under that line']]},
+  {ic:'book', name:'Memory', items:[['Memory','What you said, stored under tags'],['Fades','Grows faint with time, bright again when mentioned'],['Forget','Anything you would rather not keep, you delete'],['Handover','Recent things come along to a new device']]},
+  {ic:'tool', name:'Hands', items:[['Assign','One sentence becomes steps, taken one at a time'],['Desk','Queue, progress, output, retry'],['Code','Open a job, edit code, run tests, roll back'],['Documents','Reads PDF, Word, Excel — and writes them'],['Lookup','Searches the web, answers with sources'],['Council','Several models propose, one version settles']]},
+  {ic:'cal', name:'Days', items:[['Calendar','One sentence to file it; the time is read for you'],['Remind','Pushes when due; travel time worked out beforehand'],['Briefing','What is due today, and how to close it out'],['Initiative','Stuck or finished, Ta speaks first']]},
+  {ic:'heart', name:'Alive', items:[['Mood','Eight hormones; mood really does change the tone'],['Bond','Closeness sets how often it speaks first, and how much'],['Character','Name, temperament, face — all changeable'],['Faces','Knows who you mean']]},
+  {ic:'shield', name:'Floor', items:[['Permissions','Three levels; deletion always asks first'],['Pairing','Scan a code or type six digits to link phone and desktop'],['Export','Memory packaged up; carry on elsewhere'],['Devices','One memory; the desktop is its only home']]},
+];
+const ICONS = {
+  chat:'<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H8l-4 3v-4.6A8.5 8.5 0 1 1 21 11.5Z"/>',
+  book:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5Z"/><path d="M4 5.5v15"/>',
+  tool:'<path d="M14 7a4 4 0 1 0 4 5l-3-3"/><path d="M13 9 4 18l2 2 9-9"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>',
+  heart:'<path d="M12 20s-7-4.6-7-9.4A3.9 3.9 0 0 1 12 7a3.9 3.9 0 0 1 7 3.6C19 15.4 12 20 12 20Z"/>',
+  shield:'<path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6Z"/><path d="M9 12l2 2 4-4"/>',
+};
+const DL = [
+  ['macOS','Apple silicon · .dmg','Recommended'],
+  ['Windows','10 / 11 · .exe',''],
+  ['Android','8.0 and above · .apk',''],
+  ['HarmonyOS','5.0 and above · .hap',''],
+];
+
+document.body.classList.add('js');
+
+/* ───── 渲染 ───── */
+document.getElementById('fgrid').innerHTML = GROUPS.map(g => `
+  <div class="fgroup rv">
+    <div class="fgroup-h"><svg viewBox="0 0 24 24">${ICONS[g.ic]}</svg><span>${g.name}</span></div>
+    <div class="flist">
+      ${g.items.map(([k,v]) => `<div class="fi"><b>${k}</b><span>${v}</span></div>`).join('')}
+    </div>
+  </div>`).join('');
+
+document.getElementById('dlrow').innerHTML = DL.map(([n,s,r]) => `
+  <a class="rv" href="https://github.com/horizon-66/aster/releases/latest">
+    <h3>${n}${r ? `<em>${r}</em>` : ''}</h3><span>${s}</span>
+  </a>`).join('');
+
+const plain = 'What you said stays here · no account · no server · change the model, keep the memory · ';
+document.getElementById('track').innerHTML =
+  `<span>${plain}<b>The memory is yours</b> · ${plain}<b>and it travels with you</b> · </span>`.repeat(2);
+
+/* ───── 光标 ───── */
+const dot = document.getElementById('dot'), ring = document.getElementById('ring');
+let mx = innerWidth/2, my = innerHeight/2, rx = mx, ry = my;
+addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  dot.style.transform = `translate(${mx}px,${my}px) translate(-50%,-50%)`;
+}, {passive:true});
+(function loop(){
+  rx += (mx - rx) * .14; ry += (my - ry) * .14;
+  ring.style.transform = `translate(${rx.toFixed(1)}px,${ry.toFixed(1)}px) translate(-50%,-50%)`;
+  requestAnimationFrame(loop);
+})();
+const HOT = 'a,button,.fi,.pitem,.dev,.dl a';
+function bindHot(el){
+  el.addEventListener('mouseenter', () => document.body.classList.add('hot'));
+  el.addEventListener('mouseleave', () => document.body.classList.remove('hot'));
+}
+document.querySelectorAll(HOT).forEach(bindHot);
+
+/* ───── 顶栏 + 进度 ───── */
+const hdEl = document.getElementById('top'), bar = document.getElementById('bar');
+let ticking = false;
+function onScroll(){
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    hdEl.classList.toggle('on', scrollY > 30);
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.width = (h > 0 ? scrollY / h * 100 : 0) + '%';
+    ticking = false;
+  });
+}
+addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+/* ───── 揭示 ───── */
+const io = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target;
+    const sib = [...(el.parentElement?.children || [])].filter(x => x.classList.contains('rv'));
+    el.style.transitionDelay = (Math.max(0, sib.indexOf(el)) % 4) * .07 + 's';
+    el.classList.add('on');
+    io.unobserve(el);
+  });
+}, {threshold:.12, rootMargin:'0px 0px -6% 0px'});
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+const winEl = document.getElementById('win');
+if (winEl) {
+  const ioW = new IntersectionObserver(es => {
+    es.forEach(e => { if (e.isIntersecting) { winEl.classList.add('on'); ioW.unobserve(winEl); } });
+  }, {threshold:.08});
+  ioW.observe(winEl);
+  setTimeout(() => winEl.classList.add('on'), 2400);
+}
+setTimeout(() => document.querySelectorAll('.rv').forEach(el => el.classList.add('on')), 2400);
+
+/* ───── 首屏视差 ───── */
+(function(){
+  const stage = document.getElementById('stage');
+  if (!stage) return;
+  const layers = [...stage.querySelectorAll('.layer')];
+  let tx = 0, ty = 0, cx = 0, cy = 0;
+  if (matchMedia('(pointer:fine)').matches) {
+    stage.addEventListener('mousemove', e => {
+      const r = stage.getBoundingClientRect();
+      tx = (e.clientX - r.left - r.width/2) / r.width;
+      ty = (e.clientY - r.top - r.height/2) / r.height;
+    });
+    stage.addEventListener('mouseleave', () => { tx = 0; ty = 0; });
+    (function anim(){
+      cx += (tx - cx) * .07; cy += (ty - cy) * .07;
+      layers.forEach(l => {
+        const d = parseFloat(l.dataset.depth || 1);
+        l.style.transform = `translate(${(-cx*d*22).toFixed(2)}px, ${(-cy*d*18).toFixed(2)}px)`;
+      });
+      requestAnimationFrame(anim);
+    })();
+  }
+})();
+
+/* ───── Desktop三屏 ───── */
+
+/* ───── 手机轮播 ───── */
+(function(){
+  const box = document.getElementById('devwrap');
+  const devs = [...box.querySelectorAll('.dev')];
+  const bars = [...document.getElementById('pbar').children];
+  let i = 0, timer;
+  function show(n){
+    i = (n + devs.length) % devs.length;
+    devs.forEach((d,k) => d.classList.toggle('on', k === i));
+    bars.forEach((b,k) => b.classList.toggle('on', k === i));
+  }
+  function play(){ stop(); timer = setInterval(() => show(i+1), 3600); }
+  function stop(){ if (timer) clearInterval(timer); }
+  bars.forEach((b,k) => b.addEventListener('click', () => { show(k); play(); }));
+  box.addEventListener('mouseenter', stop); box.addEventListener('mouseleave', play);
+  let sx = null;
+  box.addEventListener('touchstart', e => { sx = e.touches[0].clientX; stop(); }, {passive:true});
+  box.addEventListener('touchend', e => {
+    if (sx === null) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 34) show(i + (dx < 0 ? 1 : -1));
+    sx = null; play();
+  }, {passive:true});
+  play();
+})();
+
+/* ───── 叙事 ───── */
+(function(){
+  const sec = document.getElementById('story');
+  const steps = [...sec.querySelectorAll('.step')];
+  const devs = [...sec.querySelectorAll('.svis .dev')];
+  const bars = [...document.getElementById('sprog').children];
+  const wide = () => innerWidth > 900;
+  let cur = -1;
+  function set(n){
+    if (n === cur) return;
+    cur = n;
+    steps.forEach((s,k) => s.classList.toggle('on', k === n));
+    devs.forEach((d,k) => d.classList.toggle('on', k === n));
+    bars.forEach((b,k) => b.classList.toggle('on', k === n));
+  }
+  if (wide()) {
+    const upd = () => {
+      const r = sec.getBoundingClientRect();
+      const total = sec.offsetHeight - innerHeight;
+      const p = Math.min(1, Math.max(0, -r.top / Math.max(1, total)));
+      set(Math.min(steps.length - 1, Math.floor(p * steps.length + .12)));
+    };
+    addEventListener('scroll', upd, {passive:true});
+    addEventListener('resize', upd);
+    upd();
+  } else {
+    set(0);
+    let k = 0;
+    setInterval(() => { k = (k+1) % steps.length; set(k); }, 3800);
+  }
+  bars.forEach((b,k) => b.addEventListener('click', () => {
+    if (!wide()) { set(k); return; }
+    const total = sec.offsetHeight - innerHeight;
+    scrollTo({top: sec.offsetTop + total * (k + .5) / steps.length, behavior:'smooth'});
+  }));
+})();
+
+/* ───── 数字 ───── */
+document.querySelectorAll('[data-n]').forEach(el => {
+  const target = +el.dataset.n;
+  const io2 = new IntersectionObserver(es => {
+    es.forEach(e => {
+      if (!e.isIntersecting) return;
+      const t0 = performance.now();
+      (function tick(now){
+        const p = Math.min(1, (now - t0) / 900);
+        el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) requestAnimationFrame(tick);
+      })(t0);
+      io2.unobserve(el);
+    });
+  }, {threshold:.5});
+  io2.observe(el);
+});
+
+/* Desktop：滚动翻九屏 */
+(function(){
+  const sec = document.getElementById('desktop');
+  if (!sec) return;
+  const steps = [...sec.querySelectorAll('.dstep')];
+  const shots = [...sec.querySelectorAll('.appbody .shot')];
+  const prog = document.getElementById('dprog');
+  prog.innerHTML = steps.map((_, i) => '<i' + (i === 0 ? ' class="on"' : '') + '></i>').join('');
+  const bars = [...prog.children];
+  const wide = () => innerWidth > 900;
+  let cur = -1;
+  function set(n){
+    if (n === cur) return;
+    cur = n;
+    steps.forEach((el, i) => el.classList.toggle('on', i === n));
+    shots.forEach((el, i) => el.classList.toggle('on', i === n));
+    bars.forEach((el, i) => el.classList.toggle('on', i === n));
+  }
+  if (wide()) {
+    const upd = () => {
+      const r = sec.getBoundingClientRect();
+      const total = sec.offsetHeight - innerHeight;
+      const p = Math.min(1, Math.max(0, -r.top / Math.max(1, total)));
+      set(Math.min(steps.length - 1, Math.floor(p * steps.length + .12)));
+    };
+    addEventListener('scroll', upd, {passive:true});
+    addEventListener('resize', upd);
+    upd();
+  } else {
+    set(0);
+    let k = 0;
+    setInterval(() => { k = (k + 1) % steps.length; set(k); }, 3600);
+  }
+})();
+</script>
+</body>
+</html>
