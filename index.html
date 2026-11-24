@@ -387,8 +387,8 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 
 /* 电脑端这一节的章节号：从右上挪到左边那道空档里（和箭头指的位置一致） */
 /* 这一节的章节号：用最稳的那条路（章节水印），位置压到正文上方 */
-#desktop.sec::before{right:auto;left:var(--pad);top:36vh;z-index:9;
-  font-size:clamp(64px,8.4vw,120px);color:rgba(0,0,0,.07)}
+/* 和其它节的章节号一样大（默认 clamp(90,16vw,220)），只挪位置、提到最上层 */
+#desktop.sec::before{right:auto;left:var(--pad);top:15vh;z-index:9;color:rgba(0,0,0,.055)}
 @media(max-width:900px){#desktop.sec::before{left:var(--pad);top:2vh;font-size:76px}}
 
 /* 电脑端：滚动驱动（与「怎么干活」同一套手感） */
