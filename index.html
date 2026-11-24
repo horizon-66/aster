@@ -387,10 +387,11 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 
 /* 电脑端这一节的章节号：从右上挪到左边那道空档里（和箭头指的位置一致） */
 #desktop.sec::before{display:none}
-/* 章节号放进正文栏，钉在「说什么都在」正上方，跟着内容走 */
-.dcopy .dn{position:absolute;left:0;bottom:100%;margin-bottom:28px;
+/* 这一节的章节号：放在正文栏里，标题正上方。给栏留够高度，绝不会叠到字上 */
+.dstory .dcopy{min-height:480px}
+.dcopy .dn{position:absolute;left:0;top:0;pointer-events:none;
   font-family:var(--mono);font-size:clamp(64px,8.4vw,120px);font-weight:500;letter-spacing:-.05em;
-  line-height:1;color:rgba(0,0,0,.06);pointer-events:none}
+  line-height:1;color:rgba(0,0,0,.06)}
 @media(max-width:900px){#desktop.sec::before{left:var(--pad);top:2vh;font-size:76px}}
 
 /* 电脑端：滚动驱动（与「怎么干活」同一套手感） */
