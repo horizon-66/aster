@@ -386,7 +386,7 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 @media(max-width:900px){.story-wm{display:none}}
 
 /* 电脑端这一节的章节号：从右上挪到左边那道空档里（和箭头指的位置一致） */
-#desktop.sec::before{right:auto;left:24vw;top:5vh;font-size:clamp(72px,11vw,160px);color:rgba(0,0,0,.045)}
+#desktop.sec::before{right:auto;left:var(--pad);top:calc(50% - 260px);font-size:clamp(64px,8.6vw,124px);color:rgba(0,0,0,.05)}
 @media(max-width:900px){#desktop.sec::before{left:var(--pad);top:2vh;font-size:76px}}
 
 /* 电脑端：滚动驱动（与「怎么干活」同一套手感） */
