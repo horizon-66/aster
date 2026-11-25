@@ -8,7 +8,7 @@
 <meta name="build" content="2026-11-25-a">
 <title>Aster — 记得住你的数字个体</title>
 <meta name="description" content="Aster 住在你的电脑里。说过的话、做过的活，都在本机。">
-<link rel="icon" href="assets/mascot-clean.webp">
+<link rel="icon" href="assets/mascot-clean.png">
 <style>
 /* ══════════ tokens ══════════ */
 :root{
@@ -78,21 +78,7 @@ body.hot #ring{width:64px;height:64px;border-color:rgba(255,59,59,.9);background
   transition:right .35s cubic-bezier(.22,.7,.3,1)}
 .top nav a:hover{color:var(--fg)}
 .top nav a:hover::after{right:0}
-/* 手机上：头部分两行——上面 logo + 中英切换，下面一条可横滑的导航，谁都不挤掉谁 */
-@media(max-width:900px){
-  .top{height:auto;padding:9px 0}
-  .top .wrap{flex-wrap:wrap;row-gap:7px;align-items:center}
-  .logo{order:1;flex:0 0 auto}
-/** 手机上把中英切换固定在右上角，绝不参与换行，免得被挤没 */
-  .langsw{position:fixed!important;display:inline-flex!important;top:11px!important;right:14px!important;z-index:95!important;margin:0!important;
-    background:rgba(255,255,255,.94);box-shadow:0 2px 10px rgba(0,0,0,.08);
-    border-color:rgba(0,0,0,.22)}
-  .top nav{order:3;flex:1 0 100%;display:flex;gap:16px;overflow-x:auto;max-width:100%;
-    -webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0 1px}
-  .top nav::-webkit-scrollbar{display:none}
-  .top nav a{font-size:12.5px;white-space:nowrap}
-}
-
+@media(max-width:900px){.top nav{display:none}}
 
 /* ══════════ 首屏 ══════════ */
 .hero{padding:clamp(120px,16vh,190px) 0 clamp(60px,10vh,110px);min-height:100vh;display:flex;align-items:center}
@@ -130,7 +116,7 @@ h1 em{font-style:normal;color:var(--red)}
   background:radial-gradient(circle,rgba(255,73,73,.26),transparent 66%);filter:blur(18px)}
 .ring1{width:74%;aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.06)}
 .ring2{width:92%;aspect-ratio:1;border-radius:50%;border:1px solid rgba(255,255,255,.032)}
-.mascot{width:min(86%,430px);aspect-ratio:1;background:url(assets/mascot-light.webp) center/contain no-repeat;
+.mascot{width:min(86%,430px);aspect-ratio:1;background:url(assets/mascot-light.png) center/contain no-repeat;
   animation:float 6.6s ease-in-out infinite;
   -webkit-mask-image:linear-gradient(to bottom,#000 86%,rgba(0,0,0,0) 100%);
   mask-image:linear-gradient(to bottom,#000 86%,rgba(0,0,0,0) 100%)}
@@ -399,12 +385,6 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
   letter-spacing:-.05em;line-height:1;color:rgba(0,0,0,.035)}
 @media(max-width:900px){.story-wm{display:none}}
 
-/* 电脑端这一节的章节号：从右上挪到左边那道空档里（和箭头指的位置一致） */
-/* 这一节的章节号：用最稳的那条路（章节水印），位置压到正文上方 */
-/* 和其它节的章节号一样大（默认 clamp(90,16vw,220)），只挪位置、提到最上层 */
-#desktop.sec::before{right:auto;left:var(--pad);top:15vh;z-index:9;color:rgba(0,0,0,.055)}
-@media(max-width:900px){#desktop.sec::before{left:var(--pad);top:2vh;font-size:76px}}
-
 /* 电脑端：滚动驱动（与「怎么干活」同一套手感） */
 .dstory{position:relative}
 .dpin{position:sticky;top:0;height:100vh;display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr);
@@ -476,9 +456,7 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
       <a href="#features">功能</a>
       <a href="#story">怎么干活</a>
       <a href="#dl">下载</a>
-      <a href="index.html" onclick="localStorage.setItem('lang','zh')">中文</a>
-      <a href="en.html" onclick="localStorage.setItem('lang','en')">EN</a>
-    </nav>
+    <div class="langsw"><a class="on" href="index.html" onclick="localStorage.setItem('lang','zh')">中文</a><a href="en.html" onclick="localStorage.setItem('lang','en')">EN</a></div></nav>
   </div>
 </header>
 
@@ -547,19 +525,19 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
       </div>
       <div class="dvis">
         <div class="macw on" id="win">
-          <img class="mac" src="assets/macbook.webp?v=4110" alt="" loading="lazy" decoding="async">
+          <img class="mac" src="assets/macbook.png" alt="">
           <div class="appwin" id="appwin">
             <div class="appbar"><i></i><i></i><i></i></div>
             <div class="appbody">
-              <img class="shot on" src="shots3/d-chat.webp" alt="" loading="lazy" decoding="async">
-              <img class="shot" src="shots3/d-work.webp" alt="" loading="lazy" decoding="async">
-              <img class="shot" src="shots3/d-mem.webp" alt="" loading="lazy" decoding="async">
-              <img class="shot" src="shots3/d-trip.webp" alt="" loading="lazy" decoding="async">
-              <img class="shot" src="shots3/d-role.webp" alt="" loading="lazy" decoding="async">
-              <img class="shot" src="shots3/d-code.webp" alt="" loading="lazy" decoding="async">
-              <img class="shot" src="shots3/d-debate.webp" alt="" loading="lazy" decoding="async">
-              <img class="shot" src="shots3/d-skill.webp" alt="" loading="lazy" decoding="async">
-              <img class="shot" src="shots3/d-set.webp" alt="" loading="lazy" decoding="async">
+              <img class="shot on" src="shots3/d-chat.png" alt="">
+              <img class="shot" src="shots3/d-work.png" alt="">
+              <img class="shot" src="shots3/d-mem.png" alt="">
+              <img class="shot" src="shots3/d-trip.png" alt="">
+              <img class="shot" src="shots3/d-role.png" alt="">
+              <img class="shot" src="shots3/d-code.png" alt="">
+              <img class="shot" src="shots3/d-debate.png" alt="">
+              <img class="shot" src="shots3/d-skill.png" alt="">
+              <img class="shot" src="shots3/d-set.png" alt="">
             </div>
           </div>
         </div>
@@ -583,10 +561,10 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
         </div>
       </div>
       <div class="devwrap" id="devwrap">
-        <div class="dev on"><img class="scr" src="shots3/talk.webp" alt="" loading="lazy" decoding="async"><img class="bez" src="assets/device.webp?v=4110" alt="" loading="lazy" decoding="async"></div>
-        <div class="dev"><img class="scr" src="shots3/tool.webp" alt="" loading="lazy" decoding="async"><img class="bez" src="assets/device.webp?v=4110" alt="" loading="lazy" decoding="async"></div>
-        <div class="dev"><img class="scr" src="shots3/trip.webp" alt="" loading="lazy" decoding="async"><img class="bez" src="assets/device.webp?v=4110" alt="" loading="lazy" decoding="async"></div>
-        <div class="dev"><img class="scr" src="shots3/mem.webp" alt="" loading="lazy" decoding="async"><img class="bez" src="assets/device.webp?v=4110" alt="" loading="lazy" decoding="async"></div>
+        <div class="dev on"><img class="scr" src="shots3/talk.png?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/tool.png?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/trip.png?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/mem.png?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
       </div>
     </div>
   </section>
@@ -647,10 +625,10 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
         </div>
       </div>
       <div class="svis" id="svis">
-        <div class="dev on"><img class="scr" src="shots3/talk.webp" alt="" loading="lazy" decoding="async"><img class="bez" src="assets/device.webp?v=4110" alt="" loading="lazy" decoding="async"></div>
-        <div class="dev"><img class="scr" src="shots3/tool.webp" alt="" loading="lazy" decoding="async"><img class="bez" src="assets/device.webp?v=4110" alt="" loading="lazy" decoding="async"></div>
-        <div class="dev"><img class="scr" src="shots3/trip.webp" alt="" loading="lazy" decoding="async"><img class="bez" src="assets/device.webp?v=4110" alt="" loading="lazy" decoding="async"></div>
-        <div class="dev"><img class="scr" src="shots3/mem.webp" alt="" loading="lazy" decoding="async"><img class="bez" src="assets/device.webp?v=4110" alt="" loading="lazy" decoding="async"></div>
+        <div class="dev on"><img class="scr" src="shots3/talk.png?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/tool.png?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/trip.png?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
+        <div class="dev"><img class="scr" src="shots3/mem.png?v=13" alt=""><img class="bez" src="assets/device.png" alt=""></div>
       </div>
       <div class="sprog" id="sprog"><i class="on"></i><i></i><i></i><i></i></div>
     </div>
@@ -672,7 +650,6 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
       <h2 class="rv"><span class="ln"><i>先装电脑端</i></span></h2>
       <p class="lead rv">Ta 住在那儿。手机是之后的事：装好，连上。</p>
       <div class="dl" id="dlrow"></div>
-      <p class="lead rv" style="margin-top:16px">算力花在哪儿：记忆、检索、判断、语音转写、看图都在你这台电脑上跑；说话交给模型——可以是本机模型，也可以是你自己填 key 的云端服务。对话内容会发给那个模型服务商，但记忆库不会整本上传：本地先筛过，每次通常只带几百到一千多个 token，聊一整天常常不到一块钱。</p>
     </div>
   </section>
 </main>
