@@ -481,6 +481,10 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 .grow-note p{display:none}
 .grow-note p.on{display:block;animation:noteIn .45s cubic-bezier(.22,.7,.3,1) both}
 @keyframes noteIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* 02 电脑端：这一段是整屏吸附的版式，右上角那个大水印数字落在空白里，离内容太远；
+   这一段只留 kicker 里的「02 — 电脑端」，不再重复大数字 */
+.dstory::before{display:none!important}
 </style>
 </head>
 <body>
