@@ -449,10 +449,10 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
   .top .wrap{flex-wrap:wrap;row-gap:7px;align-items:center}
   .logo{order:1;flex:0 0 auto}
   .langsw{display:inline-block!important;position:static!important;order:2;margin:0!important}
-  .top nav{order:3;flex:1 0 100%;display:flex;gap:16px;overflow-x:auto;max-width:100%;
+  .top nav{order:3;flex:1 0 100%;display:flex;align-items:center;gap:13px;overflow-x:auto;max-width:100%;
     -webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0 1px}
   .top nav::-webkit-scrollbar{display:none}
-  .top nav a{font-size:12.5px;white-space:nowrap}
+  .top nav a{font-size:11.5px;white-space:nowrap}
 }
 
 /* 四件事：卡片按功能网格那套来（红色小图标 + 等宽小标 + 宋体标签），上下两行等高 */
@@ -502,6 +502,19 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 
 /* 桌面端：这一段的气泡是贴在舞台边缘的，overflow:hidden 会把右边那颗切掉 → 放开裁切 */
 @media(min-width:901px){.hero .stage{overflow:visible}}
+
+/* 中英切换：小滑动胶囊（两个页面共用，手机端更小一档） */
+.langsw{position:relative;display:inline-flex;align-items:center;padding:2px;width:max-content;
+  border:1px solid rgba(0,0,0,.16);border-radius:999px;background:rgba(255,255,255,.6);
+  margin-left:18px;flex:0 0 auto}
+.langsw a{position:relative;z-index:1;font-family:var(--mono);font-size:10px;letter-spacing:.12em;
+  padding:3px 9px;border-radius:999px;text-decoration:none;color:var(--fg3);
+  transition:background .22s,color .22s;white-space:nowrap}
+.langsw a.on{color:#fff;background:var(--fg)}
+@media(max-width:900px){
+  .langsw{margin-left:10px;padding:1.5px}
+  .langsw a{font-size:9px;padding:2px 7px;letter-spacing:.06em}
+}
 </style>
 </head>
 <body>
@@ -519,8 +532,7 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
       <a href="#story">How it works</a>
       <a href="docs.html">Guide</a>
       <a href="#dl">Download</a>
-      <a href="index.html" onclick="localStorage.setItem('lang','zh')">中文</a>
-      <a href="en.html" onclick="localStorage.setItem('lang','en')">EN</a></nav>
+      <span class="langsw" data-lang="en"><a href="index.html">中文</a><a href="en.html" class="on">EN</a></span></nav>
 </div>
 </header>
 
