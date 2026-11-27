@@ -441,6 +441,20 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 .langsw a:hover{color:var(--fg)}
 .langsw a.on{color:#fff;background:var(--fg)}
 @media(max-width:900px){.langsw{margin-left:10px}.langsw a{padding:2px 7px;font-size:9.5px}}
+
+/* 手机上：头部分两行——上面 logo，下面一条可横滑的导航，中英切换固定右上角，谁都不挤掉谁
+   2026-11-27 补回：这条规则之前只存在于线上仓库，主仓库的 site/ 是老版本，推上去把手机导航覆盖没了 */
+@media(max-width:900px){
+  .top{height:auto;padding:9px 0}
+  .top .wrap{flex-wrap:wrap;row-gap:7px;align-items:center}
+  .logo{order:1;flex:0 0 auto}
+  .langsw{order:2;margin-left:auto!important;margin-right:0!important;
+    display:inline-flex!important;flex:0 0 auto}
+  .top nav{order:3;flex:1 0 100%;display:flex;gap:16px;overflow-x:auto;max-width:100%;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0 1px}
+  .top nav::-webkit-scrollbar{display:none}
+  .top nav a{font-size:12.5px;white-space:nowrap}
+}
 </style>
 </head>
 <body>
@@ -456,8 +470,8 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
       <a href="#scenes">场景</a>
       <a href="#features">功能</a>
       <a href="#story">怎么干活</a>
-      <a href="#dl">下载</a>
-    <div class="langsw"><a class="on" href="index.html" onclick="localStorage.setItem('lang','zh')">中文</a><a href="en.html" onclick="localStorage.setItem('lang','en')">EN</a></div></nav>
+      <a href="#dl">下载</a></nav>
+    <div class="langsw"><a class="on" href="index.html" onclick="localStorage.setItem('lang','zh')">中文</a><a href="en.html" onclick="localStorage.setItem('lang','en')">EN</a></div>
   </div>
 </header>
 
@@ -572,7 +586,7 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 
   <section id="scenes" class="sec" data-no="035">
     <div class="wrap">
-      <div class="kicker rv">035 — 它每天替你做的四件事</div>
+      <div class="kicker rv">它每天替你做的四件事</div>
       <h2 class="rv"><span class="ln"><i>不谈模型，<br>只说四件事</i></span></h2>
       <p class="lead rv">抽象的能力说明不如具体的四件事：写、理、查、陪。每一件都在本机完成，做过什么留有记录。</p>
       <div class="ext-grid rv">

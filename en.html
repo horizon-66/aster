@@ -441,6 +441,20 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 .langsw a:hover{color:var(--fg)}
 .langsw a.on{color:#fff;background:var(--fg)}
 @media(max-width:900px){.langsw{margin-left:10px}.langsw a{padding:2px 7px;font-size:9.5px}}
+
+/* 手机上：头部分两行——上面 logo，下面一条可横滑的导航，中英切换固定右上角，谁都不挤掉谁
+   2026-11-27 补回：这条规则之前只存在于线上仓库，主仓库的 site/ 是老版本，推上去把手机导航覆盖没了 */
+@media(max-width:900px){
+  .top{height:auto;padding:9px 0}
+  .top .wrap{flex-wrap:wrap;row-gap:7px;align-items:center}
+  .logo{order:1;flex:0 0 auto}
+  .langsw{order:2;margin-left:auto!important;margin-right:0!important;
+    display:inline-flex!important;flex:0 0 auto}
+  .top nav{order:3;flex:1 0 100%;display:flex;gap:16px;overflow-x:auto;max-width:100%;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0 1px}
+  .top nav::-webkit-scrollbar{display:none}
+  .top nav a{font-size:12.5px;white-space:nowrap}
+}
 </style>
 </head>
 <body>
@@ -456,8 +470,8 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
       <a href="#scenes">Scenes</a>
       <a href="#features">Features</a>
       <a href="#story">How it works</a>
-      <a href="#dl">Download</a>
-    <div class="langsw"><a href="index.html" onclick="localStorage.setItem('lang','zh')">中文</a><a class="on" href="en.html" onclick="localStorage.setItem('lang','en')">EN</a></div></nav>
+      <a href="#dl">Download</a></nav>
+    <div class="langsw"><a href="index.html" onclick="localStorage.setItem('lang','zh')">中文</a><a class="on" href="en.html" onclick="localStorage.setItem('lang','en')">EN</a></div>
   </div>
 </header>
 
