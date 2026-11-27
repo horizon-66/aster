@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+<script>document.documentElement.className+=" js";</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
@@ -157,13 +158,14 @@ h2{font-family:var(--serif);font-weight:600;font-size:clamp(26px,3.6vw,50px);lin
 .kicker{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;color:var(--fg3);margin-bottom:16px}
 
 /* 揭示：clip 擦出 */
-.rv{opacity:0;transform:translateY(26px);
+html.js .rv{opacity:0;transform:translateY(26px);
   transition:opacity .9s cubic-bezier(.22,.7,.3,1),transform .9s cubic-bezier(.22,.7,.3,1)}
-.rv.on{opacity:1;transform:none}
+html.js .rv.on{opacity:1;transform:none}
 h1 .ln,h2 .ln{display:block;overflow:hidden}
-h1 .ln>i,h2 .ln>i{display:block;font-style:normal;transform:translateY(110%);
+h1 .ln>i,h2 .ln>i{display:block;font-style:normal;transform:none;}
   transition:transform 1.1s cubic-bezier(.19,1,.22,1)}
-.on h1 .ln>i,.on h2 .ln>i,h1.on .ln>i,h2.on .ln>i{transform:none}
+html.js h1 .ln>i,html.js h2 .ln>i{transform:translateY(110%)}
+html.js .on h1 .ln>i,html.js .on h2 .ln>i,html.js h1.on .ln>i,html.js h2.on .ln>i{transform:none}
 
 /* ══════════ 电脑端窗口 ══════════ */
 .macw{position:relative;width:100%;aspect-ratio:2730/1535;opacity:0;transform:perspective(1800px) rotateX(6deg);
