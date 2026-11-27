@@ -499,6 +499,9 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
   .dstep h3{font-size:clamp(38px,3.5vw,50px)}
   .lead{font-size:clamp(17px,1.5vw,19px)}
 }
+
+/* 桌面端：这一段的气泡是贴在舞台边缘的，overflow:hidden 会把右边那颗切掉 → 放开裁切 */
+@media(min-width:901px){.hero .stage{overflow:visible}}
 </style>
 </head>
 <body>
