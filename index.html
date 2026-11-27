@@ -485,12 +485,8 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 /* 02 电脑端：大数字挪到内容上方、左对齐（原来落在右边的空白里，离内容太远） */
 
 
-/* 02 电脑端：大数字放进内容块（.dcopy）里，跟「01 / 对话」那条小标同一个左边缘 */
+/* 02 电脑端：大数字用跟 06 一样的 story-wm 组件，不再另写一套 */
 .dstory::before{display:none!important}
-.dcopy{position:relative}
-.dcopy .snum{position:absolute;left:-2px;top:-1.15em;font-family:var(--mono);
-  font-size:clamp(88px,13vw,168px);font-weight:500;letter-spacing:-.05em;
-  color:rgba(0,0,0,.045);line-height:1;pointer-events:none;z-index:0;user-select:none}
 </style>
 </head>
 <body>
@@ -565,9 +561,9 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 
   <section id="desktop" class="sec dstory" data-no="02">
     <div class="dpin">
+      <div class="story-wm" aria-hidden="true">02</div>
       <div class="story-head"><div class="kicker">02 — 电脑端</div></div>
       <div class="dcopy" id="dcopy">
-        <span class="snum" aria-hidden="true">02</span>
         <div class="dstep on"><div class="n">01 / 对话</div><h3>所言皆在</h3><p>一句话过去，一句话回来。说过的话按日排列，随时可翻。</p></div>
         <div class="dstep"><div class="n">02 / 工作台</div><h3>排着、跑着、卡着</h3><p>排队、进行、受阻、完成。点开任一条，可见其调用之次序。</p></div>
         <div class="dstep"><div class="n">03 / 记忆</div><h3>所记皆在此处</h3><p>按时间倒序排列，标签已分。不愿留者，当场即可忘掉。</p></div>
@@ -662,7 +658,7 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 
   <section class="story" id="story" data-no="06">
     <div class="pin">
-      <div class="story-wm" aria-hidden="true">05</div>
+      <div class="story-wm" aria-hidden="true">06</div>
       <div class="story-head">
         <div class="kicker">06 — 怎么干活</div>
         <h2 class="rv"><span class="ln"><i>从一句话<br>到一件事</i></span></h2>

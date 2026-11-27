@@ -485,12 +485,8 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 /* 02 电脑端：大数字挪到内容上方、左对齐（原来落在右边的空白里，离内容太远） */
 
 
-/* 02 电脑端：大数字放进内容块（.dcopy）里，跟「01 / 对话」那条小标同一个左边缘 */
+/* 02 电脑端：大数字用跟 06 一样的 story-wm 组件，不再另写一套 */
 .dstory::before{display:none!important}
-.dcopy{position:relative}
-.dcopy .snum{position:absolute;left:-2px;top:-1.15em;font-family:var(--mono);
-  font-size:clamp(88px,13vw,168px);font-weight:500;letter-spacing:-.05em;
-  color:rgba(0,0,0,.045);line-height:1;pointer-events:none;z-index:0;user-select:none}
 </style>
 </head>
 <body>
@@ -565,9 +561,9 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 
   <section id="desktop" class="sec dstory" data-no="02">
     <div class="dpin">
+      <div class="story-wm" aria-hidden="true">02</div>
       <div class="story-head"><div class="kicker">02 — Desktop</div></div>
       <div class="dcopy" id="dcopy">
-        <span class="snum" aria-hidden="true">02</span>
         <div class="dstep on"><div class="n">01 / Talk</div><h3>Everything you said is here</h3><p>One sentence out, one back. Everything is filed by day and can be found again.</p></div>
         <div class="dstep"><div class="n">02 / Desk</div><h3>Queued, running, stuck</h3><p>Queued, running, blocked, done. Open any one and see which steps it ran.</p></div>
         <div class="dstep"><div class="n">03 / Memory</div><h3>What it remembers lives here</h3><p>Newest first, sorted by tag. Anything you would rather not keep can be forgotten on the spot.</p></div>
@@ -662,7 +658,7 @@ footer .last{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
 
   <section class="story" id="story" data-no="06">
     <div class="pin">
-      <div class="story-wm" aria-hidden="true">05</div>
+      <div class="story-wm" aria-hidden="true">06</div>
       <div class="story-head">
         <div class="kicker">06 — How it works</div>
         <h2 class="rv"><span class="ln"><i>From one sentence<br>to one finished thing</i></span></h2>
