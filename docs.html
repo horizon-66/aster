@@ -55,6 +55,9 @@ footer a:hover{color:var(--red)}
   td,th{padding-right:8px}
   td:first-child{white-space:normal}
 }
+h3.grp{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--red);
+  margin:34px 0 6px;font-weight:400}
+td.say{color:var(--ink);white-space:normal}
 </style>
 </head>
 <body>
@@ -92,18 +95,62 @@ footer a:hover{color:var(--red)}
     <p>手机不运行模型，是连回电脑的一扇窗。连不上时仍可查看最近的对话，也可先留一句，待连上后自动同步。</p>
   </div>
 
-  <h2><span class="n">03</span>能力一览</h2>
-  <p>二十六项为初始配置，并非上限。以下按用途择要列出：</p>
+    <h2><span class="n">03</span>核心功能与使用场景</h2>
+  <p>以下按用途分为若干组。左列是你可以直接说出口的话，中列是它实际上做了什么，右列是这件事原本要花的功夫。</p>
+
+  <h3 class="grp">系统与设置</h3>
   <table>
-    <tr><th>类别</th><th>做什么</th><th>举例</th></tr>
-    <tr><td>说话</td><td>多轮交谈，逐字输出，可朗读；支持语音输入与看图</td><td>「把刚才那段话缩短一半」</td></tr>
-    <tr><td>记得住</td><td>说过的事按标签存档；日久自然变淡，被提起则复现；可逐条忘掉</td><td>「上周三我说过要交什么」</td></tr>
-    <tr><td>干得动</td><td>一句话拆为若干步骤，依次执行；排队、进度、产物与重试皆可见</td><td>「把桌面上散落的合同按客户归档」</td></tr>
-    <tr><td>写与改</td><td>读 PDF、Word、Excel，亦可撰写文稿、周报、方案</td><td>「按这份记录出一版周报」</td></tr>
-    <tr><td>查资料</td><td>联网检索，回答附出处；查无所得则直言查无所得</td><td>「这个接口的限流是多少」</td></tr>
-    <tr><td>过日子</td><td>一句话记事，自动识别时间；到点提醒，远行提前计入路程</td><td>「明天十点提醒我给客户回电话」</td></tr>
-    <tr><td>角色</td><td>名字、性情与面容皆可更换；表情随心情而变</td><td>「以后叫你晚穗」</td></tr>
-    <tr><td>扩展</td><td>可自行编写技能，亦可装入他人所作者；每次调用留记录，不用时移除即净</td><td>「每月把发票汇总成一张表」</td></tr>
+    <tr><th>你可以这么说</th><th>背后发生了什么</th><th>省掉的麻烦</th></tr>
+    <tr><td class="say">「把系统调成深色，音量和屏幕亮度顺手降一点」</td><td>按顺序调用外观、音量两项，各自记下原值</td><td>不必逐页翻系统设置，也不必记住原来是什么</td></tr>
+    <tr><td class="say">「这周别让它自动休眠，我在导片子」</td><td>写入防休眠，结束时可撤销</td><td>不必临时改电源计划，也不会忘关</td></tr>
+    <tr><td class="say">「截图默认存到桌面的「截图」文件夹」</td><td>改写截图保存路径与格式</td><td>不必每次手动移动文件</td></tr>
+    <tr><td class="say">「Finder 里把隐藏文件和扩展名都显示出来」</td><td>改写两项显示开关，留痕可撤销</td><td>不必记住快捷键，也不用查在哪一级菜单</td></tr>
+  </table>
+
+  <h3 class="grp">文件处理</h3>
+  <table>
+    <tr><th>你可以这么说</th><th>背后发生了什么</th><th>省掉的麻烦</th></tr>
+    <tr><td class="say">「找一下上个月跟小王签的那份 PDF 合同」</td><td>按内容检索，不依赖文件名</td><td>文件名忘了、放在哪个目录忘了，照样找得到</td></tr>
+    <tr><td class="say">「桌面太乱了，按类型归档」</td><td>列举、归类、生成清单，删除动作等你确认</td><td>不必逐个拖拽，也不会误删</td></tr>
+    <tr><td class="say">「把这个文件夹里重复的照片挑出来」</td><td>比对内容与尺寸，列出重复项</td><td>不必一张张翻看比对</td></tr>
+    <tr><td class="say">「看看这块盘上哪些文件最占地方」</td><td>扫描并列出最大的若干项</td><td>不必一层层点进去看属性</td></tr>
+  </table>
+
+  <h3 class="grp">写与改</h3>
+  <table>
+    <tr><th>你可以这么说</th><th>背后发生了什么</th><th>省掉的麻烦</th></tr>
+    <tr><td class="say">「按这个月的记录出一版周报」</td><td>读取素材，出提纲，再成稿</td><td>不必先整理素材再动笔</td></tr>
+    <tr><td class="say">「把这份合同里的关键条款摘成一张表」</td><td>读 PDF 正文，按要求抽取成表格</td><td>不必复制粘贴再手工排版</td></tr>
+    <tr><td class="say">「改一下这行代码，只改这一处」</td><td>定位后替换，改动范围可控，可回滚</td><td>不必担心整篇被重写</td></tr>
+  </table>
+
+  <h3 class="grp">查资料</h3>
+  <table>
+    <tr><th>你可以这么说</th><th>背后发生了什么</th><th>省掉的麻烦</th></tr>
+    <tr><td class="say">「这个型号的电池能撑多久」</td><td>联网检索，答案附出处</td><td>不必在多个标签页里自己比对</td></tr>
+    <tr><td class="say">「查清楚这个接口的限流规则」</td><td>先检索，再取正文</td><td>不必分辨哪些是广告或二手转述</td></tr>
+  </table>
+
+  <h3 class="grp">过日子</h3>
+  <table>
+    <tr><th>你可以这么说</th><th>背后发生了什么</th><th>省掉的麻烦</th></tr>
+    <tr><td class="say">「明天十点提醒我给客户回电话」</td><td>识别时间，写入日程，到点推送</td><td>不必自己设闹钟再记在别处</td></tr>
+    <tr><td class="say">「下周去上海出差，帮我看着点时间」</td><td>认出地点与时间，提前计入路程</td><td>不必自己算提前多久出门</td></tr>
+    <tr><td class="say">「今天都干了些什么」</td><td>读当天记录，按时序列出</td><td>不必事后回忆</td></tr>
+  </table>
+
+  <h3 class="grp">手机与多端</h3>
+  <table>
+    <tr><th>你可以这么说</th><th>背后发生了什么</th><th>省掉的麻烦</th></tr>
+    <tr><td class="say">「出门前让我在手机上看一眼进度」</td><td>手机上连接到电脑，读到同一份记录</td><td>不必把电脑带在身上</td></tr>
+    <tr><td class="say">「在外面先把这句记下」</td><td>断连时存在手机，连上后自动同步</td><td>不必等回到电脑前再补记</td></tr>
+  </table>
+
+  <h3 class="grp">扩展</h3>
+  <table>
+    <tr><th>你可以这么说</th><th>背后发生了什么</th><th>省掉的麻烦</th></tr>
+    <tr><td class="say">「把每月汇总发票这件事做成一个技能」</td><td>生成技能脚本，先给你看源码与权限，确认后装入</td><td>不必每月重复同样的交代</td></tr>
+    <tr><td class="say">「从 GitHub 装一个别人写的技能」</td><td>拉取清单与源码，确认后启用，调用留痕</td><td>不必自己改文件放进去</td></tr>
   </table>
 
   <h2><span class="n">04</span>记忆与数据</h2>
